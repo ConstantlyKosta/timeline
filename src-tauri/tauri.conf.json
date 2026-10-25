@@ -31,6 +31,7 @@
     "active": true,
     "targets": "all",
     "category": "Productivity",
+    "macOS": { "minimumSystemVersion": "11.0" },
     "shortDescription": "Local-first memory timeline",
     "longDescription": "Private, local-first notes, recordings and photos on one zoomable timeline.",
     "icon": [
