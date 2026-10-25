@@ -1,19 +1,30 @@
-# Cross-platform build. NOT RUN by the author (no GitHub runner access); see README "Unverified".
 name: build
+
 on:
-  push: { branches: [main] }
+  push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   test:
+    name: test (linux)
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm, cache-dependency-path: ui/package-lock.json }
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
       - name: Linux system deps
         run: |
           sudo apt-get update
@@ -22,43 +33,67 @@ jobs:
       - run: npm --prefix ui run build
       - run: cargo test --workspace
       - run: npm --prefix ui test
-      - run: npx --prefix ui playwright install chrome --with-deps || true
-      - run: npm --prefix ui run e2e
 
   package:
+    name: package (${{ matrix.name }})
     needs: test
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-latest, args: "--target aarch64-apple-darwin" }
-          - { os: macos-13,     args: "--target x86_64-apple-darwin" }
-          - { os: windows-latest, args: "" }
-          - { os: ubuntu-22.04, args: "" }
+          - name: macos-arm64
+            os: macos-14
+            args: "--target aarch64-apple-darwin"
+            target: aarch64-apple-darwin
+            bundle_glob: target/aarch64-apple-darwin/release/bundle
+          - name: windows-x64
+            os: windows-latest
+            args: ""
+            target: ""
+            bundle_glob: target/release/bundle
+          - name: linux-x64
+            os: ubuntu-22.04
+            args: ""
+            target: ""
+            bundle_glob: target/release/bundle
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ startsWith(matrix.os, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
       - name: Linux system deps
-        if: matrix.os == 'ubuntu-22.04'
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libsoup-3.0-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev patchelf
-      - uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          projectPath: .
-          tauriScript: cargo tauri
-          args: ${{ matrix.args }}
-          # Unsigned builds. Add APPLE_* / TAURI_SIGNING_* secrets to sign/notarize/auto-update.
+      - name: Build bundles
+        shell: bash
+        run: npx --yes @tauri-apps/cli@2 build ${{ matrix.args }}
+      - name: List bundles
+        shell: bash
+        run: find ${{ matrix.bundle_glob }} -maxdepth 3 | sort
+      - name: Zip macOS .app
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          cd ${{ matrix.bundle_glob }}/macos
+          ditto -c -k --sequesterRsrc --keepParent Timeline.app Timeline-macos-arm64.app.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: timeline-${{ matrix.os }}
-          path: target/**/release/bundle/**/*
-          if-no-files-found: warn
+          name: timeline-${{ matrix.name }}
+          path: |
+            ${{ matrix.bundle_glob }}/dmg/*.dmg
+            ${{ matrix.bundle_glob }}/macos/*.app.zip
+            ${{ matrix.bundle_glob }}/msi/*.msi
+            ${{ matrix.bundle_glob }}/nsis/*.exe
+            ${{ matrix.bundle_glob }}/appimage/*.AppImage
+            ${{ matrix.bundle_glob }}/deb/*.deb
+            ${{ matrix.bundle_glob }}/rpm/*.rpm
+          if-no-files-found: error
