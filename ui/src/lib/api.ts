@@ -1,5 +1,5 @@
 // One command surface, two transports: Tauri IPC (desktop/mobile app) and HTTP (dev bridge for the browser / Playwright).
-import type { ExportResult, ImportSummary, JobInfo, Graph, ImportOutcome, MediaItem, Note, NoteContext, NoteRef, NoteSummary, SearchHit, Stats, TagCount, TimelineEntry, Transcript } from './types';
+import type { ExportResult, ImportSummary, JobInfo, Graph, GraphRaw, GraphViewRow, NodePos, ImportOutcome, MediaItem, Note, NoteContext, NoteRef, NoteSummary, SearchHit, Stats, TagCount, TimelineEntry, Transcript } from './types';
 
 export interface Api {
   /** Raw command dispatch (name + camelCase JSON args). */
@@ -84,6 +84,12 @@ export const cmd = {
   openNoteByTitle: (title: string, date?: number) => api.call<Note>('open_note_by_title', { title, date }),
   noteContext: (id: string) => api.call<NoteContext>('note_context', { id }),
   graph: () => api.call<Graph>('graph'),
+  graphData: () => api.call<GraphRaw>('graph_data'),
+  graphViews: () => api.call<GraphViewRow[]>('graph_views'),
+  saveGraphView: (name: string, json: unknown) => api.call<null>('save_graph_view', { name, json }),
+  deleteGraphView: (name: string) => api.call<null>('delete_graph_view', { name }),
+  graphPositions: () => api.call<NodePos[]>('graph_positions'),
+  saveGraphPositions: (positions: NodePos[]) => api.call<null>('save_graph_positions', { positions }),
   search: (query: string, limit = 30) => api.call<SearchHit[]>('search', { query, limit }),
   listMedia: () => api.call<MediaItem[]>('list_media'),
   getMedia: (id: string) => api.call<MediaItem>('get_media', { id }),

@@ -159,14 +159,6 @@ code { font-family: var(--mono); background: var(--code-bg); padding: 1px 5px; b
 .cm-completionMatchedText { text-decoration: none !important; font-weight: 700; }
 
 /* mind map */
-.graph { position: relative; background: var(--bg); }
-.graph .react-flow { background: var(--bg); }
-.gnode.react-flow__node-default { border-radius: 14px; padding: 8px 10px; font-size: 12px; font-weight: 600; border: 1.5px solid var(--accent); background: var(--panel); color: var(--text); box-shadow: var(--shadow); cursor: pointer; text-align: center; }
-.gnode.ghost { border-style: dashed; border-color: var(--ghost); color: var(--ghost); background: transparent; box-shadow: none; }
-.react-flow__edge.link path { stroke: var(--accent); stroke-width: 1.6; }
-.react-flow__edge.tag path { stroke: var(--muted); }
-.graph-legend { position: absolute; z-index: 5; top: 10px; left: 12px; display: flex; gap: 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 6px 12px; font-size: 12px; color: var(--muted); align-items: center; }
-.graph-legend i { display: inline-block; width: 22px; vertical-align: middle; margin-right: 5px; border-top: 2px solid var(--accent); } .graph-legend i.dashed { border-top: 2px dashed var(--muted); } .graph-legend i.ghostdot { width: 12px; height: 12px; border: 1.5px dashed var(--ghost); border-radius: 4px; }
 
 /* search */
 .search-view { padding: 22px; max-width: 860px; margin: 0 auto; width: 100%; overflow-y: auto; }
@@ -223,9 +215,6 @@ code { font-family: var(--mono); background: var(--code-bg); padding: 1px 5px; b
 .cm-lang-badge { font: 600 10px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 .cm-code-collapsed { line-height: .6 !important; padding-top: 0 !important; padding-bottom: 4px !important; }
 
-.gnode .react-flow__handle { opacity: 0; pointer-events: none; }
-.react-flow__edge-path.link { stroke: var(--accent); stroke-width: 1.6; fill: none; }
-.react-flow__edge-path.tag { stroke: var(--muted); fill: none; }
 
 /* virtual note list + import */
 .note-vlist { flex: 1; min-height: 0; overflow-y: auto; }
@@ -264,3 +253,61 @@ code { font-family: var(--mono); background: var(--code-bg); padding: 1px 5px; b
 .ctx-menu button:hover { background: var(--accent-soft); } .ctx-menu button.danger { color: var(--danger); }
 .ctx-head { padding: 5px 10px 6px; font-size: 11px; color: var(--muted); max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid var(--border); margin-bottom: 3px; }
 button.danger-fill { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+/* ---- Mind map (Sigma) ---- */
+.graph { position: relative; background: var(--bg); overflow: hidden; min-height: 0; }
+.graph-canvas { position: absolute; inset: 0; }
+.graph-fallback { position: absolute; inset: 0; display: grid; place-items: center; }
+.graph-toolbar { position: absolute; z-index: 6; top: 10px; left: 12px; right: 12px; display: flex; gap: 4px; align-items: center; pointer-events: none; }
+.graph-toolbar > * { pointer-events: auto; }
+.graph-toolbar .graph-search { flex: 0 1 380px; background: var(--panel); border: 1px solid var(--border); border-radius: 9px; padding: 6px 10px; color: var(--text); font: inherit; }
+.graph-toolbar .graph-count { background: var(--panel); border-radius: 8px; padding: 4px 8px; border: 1px solid var(--border); font-size: 12px; }
+.graph-toolbar > button { background: var(--panel); border-color: var(--border); }
+.graph-toolbar > button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.graph-toolbar > button.ghost.active { color: var(--accent); background: var(--accent-soft); }
+.graph-toolbar > button:disabled { opacity: .5; }
+.graph-toolbar > .grow { flex: 1; pointer-events: none; }
+.graph-depth { display: inline-flex; align-items: center; gap: 2px; background: var(--panel); border: 1px solid var(--border); border-radius: 9px; padding: 2px 4px 2px 8px; font-size: 12px; color: var(--muted); }
+.graph-depth button { padding: 1px 7px; background: transparent; }
+.graph-depth b { color: var(--text); min-width: 12px; text-align: center; }
+.graph-legend { position: absolute; z-index: 5; left: 12px; bottom: 12px; max-width: 46%; display: flex; flex-wrap: wrap; gap: 4px 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 7px 12px; font-size: 12px; color: var(--muted); align-items: center; opacity: .95; }
+.graph-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.graph-legend .dot, .graph-tip .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.graph-legend .shp { display: inline-flex; color: var(--text); }
+.graph-legend .ring { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid; }
+.graph-legend .line { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
+.graph-stats { position: absolute; z-index: 5; left: 14px; top: 52px; font-size: 11px; display: flex; gap: 5px; align-items: center; pointer-events: none; }
+.graph-mini { position: absolute; z-index: 5; right: 12px; bottom: 12px; width: 160px; height: 110px; background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--border); border-radius: 8px; cursor: crosshair; }
+.graph-panel { position: absolute; z-index: 6; top: 52px; right: 12px; bottom: 134px; width: 290px; overflow-y: auto; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); font-size: 12.5px; }
+.gp-sec { border-bottom: 1px solid var(--border); }
+.gp-sec > summary { cursor: pointer; padding: 9px 12px; font-weight: 650; list-style: none; user-select: none; }
+.gp-sec > summary::before { content: '▸'; display: inline-block; width: 14px; color: var(--muted); }
+.gp-sec[open] > summary::before { content: '▾'; }
+.gp-body { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 7px; }
+.gp-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; color: var(--muted); }
+.gp-slider { grid-template-columns: 92px 1fr 34px; }
+.gp-slider em { font-style: normal; color: var(--text); text-align: right; font-variant-numeric: tabular-nums; }
+.gp-panel select, .graph-panel select, .graph-panel input[type='text'], .graph-panel input:not([type]) { background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 7px; padding: 4px 6px; font: inherit; min-width: 0; width: 100%; }
+.graph-panel input[type='range'] { width: 100%; accent-color: var(--accent); }
+.graph-panel input[type='color'] { width: 28px; height: 24px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: none; flex: none; }
+.gp-pair { display: flex; gap: 4px; }
+.gp-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+.gp-check { display: flex; align-items: center; gap: 6px; color: var(--text); }
+.gp-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.gp-chips .chip { display: inline-flex; align-items: center; gap: 2px; background: var(--accent-soft); color: var(--text); border-radius: 12px; padding: 1px 4px 1px 9px; font-size: 11.5px; }
+.gp-chips .chip button { padding: 1px 3px; border: 0; }
+.gp-presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.gp-presets button { border: 1px solid var(--border); padding: 3px 9px; }
+.gp-saved-row, .gp-link-row { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.gp-save { display: flex; gap: 6px; }
+.gp-group { display: flex; gap: 4px; align-items: center; }
+.gp-group .grow { flex: 1; } .gp-group .gname { width: 64px; flex: none; }
+.gp-actions { display: flex; gap: 6px; }
+.gp-hint { font-size: 11.5px; }
+.gp-foot { padding: 8px 12px; font-size: 11px; }
+.graph-tip { position: absolute; z-index: 8; width: 260px; pointer-events: none; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); padding: 9px 11px; font-size: 12px; display: flex; flex-direction: column; gap: 5px; }
+.graph-tip .gt-title { font-weight: 650; display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.graph-tip .gt-img { width: 100%; max-height: 120px; object-fit: cover; border-radius: 6px; }
+.graph-tip .gt-preview { color: var(--muted); display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+.graph-tip .gt-tags { display: flex; flex-wrap: wrap; gap: 4px; color: var(--link); }
+.graph-tip .gt-props { color: var(--muted); font-size: 11.5px; } .graph-tip .gt-props b { color: var(--text); font-weight: 600; }

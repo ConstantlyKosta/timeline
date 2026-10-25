@@ -75,6 +75,21 @@ pub struct ImportOutcome {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct GraphViewRow {
+    pub name: String,
+    pub json: serde_json::Value,
+    pub updated_at: Ms,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NodePos {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Stats {
     pub notes: usize,
     pub recordings: usize,
@@ -408,6 +423,49 @@ impl Library {
             .take(5)
             .collect();
         Ok(NoteContext { note, backlinks, outgoing, related, tags: p.tags.clone(), tasks: p.tasks.clone(), headings: p.headings.clone() })
+    }
+
+    /// Rich graph description for the interactive mind map (layout happens in the UI).
+    pub fn graph_data(&self) -> Result<graph::GraphData> {
+        let g = self.lock();
+        let notes = db::list_notes(&g.conn)?;
+        let media: HashMap<String, (String, bool)> = db::list_media(&g.conn)?
+            .into_iter()
+            .map(|m| (m.item.id.clone(), (m.item.title.clone(), m.item.kind == MediaKind::Photo)))
+            .collect();
+        Ok(graph::build_data(&notes, &g.parsed, &media))
+    }
+
+    pub fn graph_views(&self) -> Result<Vec<GraphViewRow>> {
+        let g = self.lock();
+        Ok(db::graph_views(&g.conn)?
+            .into_iter()
+            .map(|(name, json, updated_at)| GraphViewRow { name, json: serde_json::from_str(&json).unwrap_or(serde_json::Value::Null), updated_at })
+            .collect())
+    }
+
+    pub fn save_graph_view(&self, name: &str, json: &serde_json::Value) -> Result<()> {
+        let name = name.trim();
+        if name.is_empty() {
+            return Err(Error::InvalidArgument("a view needs a name".into()));
+        }
+        let g = self.lock();
+        db::save_graph_view(&g.conn, name, &json.to_string(), self.now())?;
+        Ok(())
+    }
+
+    pub fn delete_graph_view(&self, name: &str) -> Result<()> {
+        db::delete_graph_view(&self.lock().conn, name)?;
+        Ok(())
+    }
+
+    pub fn graph_positions(&self) -> Result<Vec<NodePos>> {
+        Ok(db::node_positions(&self.lock().conn)?.into_iter().map(|(id, x, y)| NodePos { id, x, y }).collect())
+    }
+
+    pub fn save_graph_positions(&self, pos: &[NodePos]) -> Result<()> {
+        let rows: Vec<(String, f64, f64)> = pos.iter().map(|p| (p.id.clone(), p.x, p.y)).collect();
+        db::replace_node_positions(&mut self.lock().conn, &rows)
     }
 
     pub fn graph(&self) -> Result<Graph> {

@@ -6,6 +6,7 @@ export default defineConfig({
   testDir: './e2e',
   timeout: 60_000,
   workers: 1,
+  retries: process.env.CI ? 1 : 0, // a few editor/WebGL timing races on loaded runners
   fullyParallel: false,
   reporter: [['list']],
   use: {

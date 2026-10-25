@@ -19,6 +19,19 @@ fn out<T: serde::Serialize>(v: T) -> Result<Value> {
 }
 
 #[derive(Deserialize)]
+struct NameArg {
+    name: String,
+}
+#[derive(Deserialize)]
+struct SaveGraphView {
+    name: String,
+    json: Value,
+}
+#[derive(Deserialize)]
+struct SavePositions {
+    positions: Vec<crate::library::NodePos>,
+}
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Id {
     id: String,
@@ -181,6 +194,23 @@ pub fn dispatch(lib: &Library, name: &str, a: Value) -> Result<Value> {
         }
         "note_context" => out(lib.note_context(&args::<Id>(a)?.id)?),
         "graph" => out(lib.graph()?),
+        "graph_data" => out(lib.graph_data()?),
+        "graph_views" => out(lib.graph_views()?),
+        "save_graph_view" => {
+            let r: SaveGraphView = args(a)?;
+            lib.save_graph_view(&r.name, &r.json)?;
+            Ok(Value::Null)
+        }
+        "delete_graph_view" => {
+            lib.delete_graph_view(&args::<NameArg>(a)?.name)?;
+            Ok(Value::Null)
+        }
+        "graph_positions" => out(lib.graph_positions()?),
+        "save_graph_positions" => {
+            let r: SavePositions = args(a)?;
+            lib.save_graph_positions(&r.positions)?;
+            Ok(Value::Null)
+        }
         "search" => {
             let r: Search = args(a)?;
             out(lib.search(&r.query, r.limit.unwrap_or(30))?)
@@ -259,6 +289,28 @@ mod tests {
         assert_eq!(hits[0]["ownerId"], id);
         dispatch(&l, "delete_note", json!({"id": id})).unwrap();
         assert!(dispatch(&l, "get_note", json!({"id": id})).is_err());
+    }
+
+    #[test]
+    fn graph_views_and_positions_persist() {
+        let (_d, l) = lib();
+        dispatch(&l, "create_note", json!({"body": "# A\n[[B]] #x", "date": 5})).unwrap();
+        let g = dispatch(&l, "graph_data", json!({})).unwrap();
+        assert_eq!(g["nodes"].as_array().unwrap().len(), 2);
+        assert_eq!(g["edges"][0]["kind"], "link");
+        dispatch(&l, "save_graph_view", json!({"name": "Mine", "json": {"colorBy": "tag"}})).unwrap();
+        dispatch(&l, "save_graph_view", json!({"name": "Mine", "json": {"colorBy": "folder"}})).unwrap();
+        let v = dispatch(&l, "graph_views", json!({})).unwrap();
+        assert_eq!(v.as_array().unwrap().len(), 1);
+        assert_eq!(v[0]["json"]["colorBy"], "folder");
+        assert!(dispatch(&l, "save_graph_view", json!({"name": " ", "json": {}})).is_err());
+        dispatch(&l, "delete_graph_view", json!({"name": "Mine"})).unwrap();
+        assert!(dispatch(&l, "graph_views", json!({})).unwrap().as_array().unwrap().is_empty());
+        dispatch(&l, "save_graph_positions", json!({"positions": [{"id": "a", "x": 1.5, "y": -2.0}, {"id": "b", "x": 3.0, "y": 4.0}]})).unwrap();
+        dispatch(&l, "save_graph_positions", json!({"positions": [{"id": "b", "x": 9.0, "y": 4.0}]})).unwrap();
+        let p = dispatch(&l, "graph_positions", json!({})).unwrap();
+        assert_eq!(p.as_array().unwrap().len(), 1);
+        assert_eq!(p[0]["x"], 9.0);
     }
 
     #[test]

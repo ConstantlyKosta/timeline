@@ -150,11 +150,11 @@ test('notes: pasted image is stored and rendered', async ({ page }) => {
 test('mind map renders notes, links, tags and ghost nodes', async ({ page }) => {
   await boot(page);
   await nav(page, 'graph');
-  await expect(page.locator('.react-flow__node').first()).toBeVisible();
-  const n = await page.locator('.react-flow__node').count();
-  const e = await page.locator('.react-flow__edge').count();
-  console.log(`graph nodes=${n} edges=${e}`);
-  expect(n).toBeGreaterThan(3);
+  const gv = page.getByTestId('graph-view');
+  await expect(gv).toHaveAttribute('data-node-count', /^([4-9]|\d\d+)$/);
+  await expect.poll(() => page.evaluate(() => (window as any).__tlGraph?.ids().length)).toBeGreaterThan(3);
+  await expect(page.getByTestId('graph-legend')).toBeVisible();
+  console.log(`graph nodes=${await gv.getAttribute('data-node-count')} edges=${await gv.getAttribute('data-edge-count')}`);
   await page.waitForTimeout(600);
   await shot(page, '13-mind-map');
 });

@@ -125,3 +125,14 @@ export interface JobInfo {
   error: string | null;
   subject: string | null;
 }
+
+// Rich graph for the interactive mind map ------------------------------------------------------
+export interface GNodeRaw {
+  id: string; title: string; kind: 'note' | 'ghost' | 'attachment'; tags: string[]; folder: string;
+  props: Record<string, string>; degree: number; inDegree: number; outDegree: number; words: number; date: number;
+  image: string | null; preview: string;
+}
+export interface GEdgeRaw { from: string; to: string; kind: string }
+export interface GraphRaw { nodes: GNodeRaw[]; edges: GEdgeRaw[]; propertyKeys: string[] }
+export interface GraphViewRow { name: string; json: unknown; updatedAt: number }
+export interface NodePos { id: string; x: number; y: number }

@@ -24,7 +24,10 @@ tempfile (tests)                 MIT OR Apache-2.0
 == UI ==
 CodeMirror 6 (@codemirror/*, codemirror)  MIT   (c) Marijn Haverbeke and others
 @lezer/markdown, @lezer/highlight         MIT   (c) Marijn Haverbeke and others
-@xyflow/react (React Flow)                MIT   (c) webkid GmbH
+sigma (v3), @sigma/node-image, @sigma/edge-curve   MIT   (c) Alexis Jacomy, Paul Girard, Benoît Simard (OuestWare)
+graphology, graphology-types              MIT   (c) Guillaume Plique
+d3-force                                  ISC   (c) Mike Bostock
+markmap-lib, markmap-view                 MIT   (c) Gerald Yang
 cmdk                                      MIT   (c) Paco Coursey
 wavesurfer.js                             BSD-3-Clause
 zustand                                   MIT   (c) Paul Henschel
@@ -38,6 +41,7 @@ jsdom                                     MIT
 
 == Design inspiration only (no code copied) ==
 Logseq, SiYuan, Zettlr, Joplin, AppFlowy, Notesnook, Memos, Journey/Diaro, Immich, Whishper/Buzz.
+Obsidian "Extended Graph" (ElsaTam/obsidian-extended-graph, GPL-3.0): its public README/feature list was used as a *specification only*; no source code was read into or copied for the mind map.
 Some of these are AGPL/GPL; nothing from them is included.
 
 == Fonts ==

@@ -251,6 +251,41 @@ pub fn attachment_ids(c: &Connection) -> Result<std::collections::HashSet<String
     let v = st.query_map([], |r| r.get::<_, String>(0))?.collect::<rusqlite::Result<_>>()?;
     Ok(v)
 }
+pub fn graph_views(c: &Connection) -> Result<Vec<(String, String, Ms)>> {
+    let mut st = c.prepare("SELECT name, json, updated_at FROM graph_view ORDER BY name COLLATE NOCASE")?;
+    let v = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?.collect::<rusqlite::Result<_>>()?;
+    Ok(v)
+}
+pub fn save_graph_view(c: &Connection, name: &str, json: &str, now: Ms) -> Result<()> {
+    c.execute(
+        "INSERT INTO graph_view(name,json,updated_at) VALUES(?1,?2,?3) ON CONFLICT(name) DO UPDATE SET json=?2, updated_at=?3",
+        params![name, json, now],
+    )?;
+    Ok(())
+}
+pub fn delete_graph_view(c: &Connection, name: &str) -> Result<usize> {
+    Ok(c.execute("DELETE FROM graph_view WHERE name=?1", [name])?)
+}
+pub fn node_positions(c: &Connection) -> Result<Vec<(String, f64, f64)>> {
+    let mut st = c.prepare("SELECT node_id, x, y FROM node_position ORDER BY node_id")?;
+    let v = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?.collect::<rusqlite::Result<_>>()?;
+    Ok(v)
+}
+/// Replaces all stored positions in one transaction.
+pub fn replace_node_positions(c: &mut Connection, pos: &[(String, f64, f64)]) -> Result<()> {
+    let tx = c.transaction()?;
+    tx.execute("DELETE FROM node_position", [])?;
+    {
+        let mut st = tx.prepare("INSERT OR REPLACE INTO node_position(node_id,x,y) VALUES(?1,?2,?3)")?;
+        for (id, x, y) in pos {
+            if x.is_finite() && y.is_finite() {
+                st.execute(params![id, x, y])?;
+            }
+        }
+    }
+    tx.commit()?;
+    Ok(())
+}
 pub fn delete_note(c: &Connection, id: &str) -> Result<usize> {
     Ok(c.execute("DELETE FROM note WHERE id=?1", [id])?)
 }
