@@ -126,6 +126,12 @@ export interface JobInfo {
   subject: string | null;
 }
 
+// Speech-to-text ---------------------------------------------------------------------------------
+export interface AsrModel { id: string; label: string; description: string; sizeBytes: number; multilingual: boolean; installed: boolean }
+export interface AsrSettings { model: string; language: string; autoTranscribe: boolean }
+export interface AsrStatus { available: boolean; backend: string; models: AsrModel[]; settings: AsrSettings }
+export interface TranscribeResult { mediaId: string; segments: number; language: string | null; audioSeconds: number; elapsedSeconds: number; realTimeFactor: number; model: string }
+
 // Rich graph for the interactive mind map ------------------------------------------------------
 export interface GNodeRaw {
   id: string; title: string; kind: 'note' | 'ghost' | 'attachment'; tags: string[]; folder: string;

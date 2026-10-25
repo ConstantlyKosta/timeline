@@ -39,6 +39,15 @@ TypeScript                                Apache-2.0   (c) Microsoft
 Playwright (@playwright/test)             Apache-2.0   (c) Microsoft
 jsdom                                     MIT
 
+== Speech-to-text (v0.2) ==
+whisper.cpp / ggml (ggerganov/whisper.cpp) — MIT. Compiled from source by whisper-rs-sys; speech models (OpenAI Whisper weights converted to ggml, MIT) are NOT bundled — downloaded on demand from huggingface.co/ggerganov/whisper.cpp and verified by SHA-256.
+whisper-rs / whisper-rs-sys (tazz4843/whisper-rs) — Unlicense.
+symphonia (pdeljanov/Symphonia) — MPL-2.0 (audio decoding: MP3, AAC/M4A, WAV, FLAC, OGG). Used unmodified as a library.
+ureq (rustls) — MIT/Apache-2.0; sha2 — MIT/Apache-2.0.
+
+== Per-note outline (v0.2) ==
+markmap-lib, markmap-view (gera2ld/markmap) — MIT (and its d3 dependencies, ISC/BSD-3).
+
 == Design inspiration only (no code copied) ==
 Logseq, SiYuan, Zettlr, Joplin, AppFlowy, Notesnook, Memos, Journey/Diaro, Immich, Whishper/Buzz.
 Obsidian "Extended Graph" (ElsaTam/obsidian-extended-graph, GPL-3.0): its public README/feature list was used as a *specification only*; no source code was read into or copied for the mind map.

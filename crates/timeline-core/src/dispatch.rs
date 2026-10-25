@@ -84,6 +84,17 @@ struct AttachTranscript {
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct TranscribeStart {
+    media_id: String,
+    model: Option<String>,
+    language: Option<String>,
+}
+#[derive(Deserialize)]
+struct ModelArg {
+    model: String,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct MediaId {
     media_id: String,
 }
@@ -142,6 +153,30 @@ pub fn dispatch_shared(lib: &Arc<Library>, name: &str, a: Value) -> Result<Value
             let id = lib.jobs().spawn("import", None, move |ctx| {
                 let s = crate::import::import_paths(&l, &r.paths, r.tz_offset_minutes, &ctx)?;
                 Ok(serde_json::to_value(s)?)
+            });
+            Ok(json!({ "jobId": id }))
+        }
+        "transcribe_start" => {
+            let r: TranscribeStart = args(a)?;
+            lib.get_media(&r.media_id)?; // fail fast on unknown ids
+            crate::asr::require(&lib.asr())?;
+            let l = lib.clone();
+            let subject = r.media_id.clone();
+            let id = lib.jobs().spawn("transcribe", Some(subject), move |ctx| l.transcribe_media(&r.media_id, r.model.as_deref(), r.language.as_deref(), &ctx));
+            Ok(json!({ "jobId": id }))
+        }
+        "asr_download_start" => {
+            let r: ModelArg = args(a)?;
+            let engine = lib.asr();
+            let engine = crate::asr::require(&engine)?.clone();
+            let model = r.model.clone();
+            let id = lib.jobs().spawn("asr-download", Some(r.model), move |ctx| {
+                let c = ctx.clone();
+                let progress: crate::asr::ProgressFn = Arc::new(move |p, m| c.progress(p, m));
+                let c = ctx.clone();
+                let cancel: crate::asr::CancelFn = Arc::new(move || c.cancelled());
+                engine.download(&model, progress, cancel)?;
+                Ok(json!({ "model": model }))
             });
             Ok(json!({ "jobId": id }))
         }
@@ -224,6 +259,16 @@ pub fn dispatch(lib: &Library, name: &str, a: Value) -> Result<Value> {
         "delete_media" => {
             lib.delete_media(&args::<Id>(a)?.id)?;
             Ok(Value::Null)
+        }
+        "asr_status" => out(lib.asr_status()?),
+        "asr_set_settings" => {
+            lib.set_asr_settings(&args::<crate::asr::AsrSettings>(a)?)?;
+            out(lib.asr_status()?)
+        }
+        "asr_delete_model" => {
+            let engine = lib.asr();
+            crate::asr::require(&engine)?.delete_model(&args::<ModelArg>(a)?.model)?;
+            out(lib.asr_status()?)
         }
         "attach_transcript" => {
             let r: AttachTranscript = args(a)?;
@@ -319,5 +364,81 @@ mod tests {
         assert!(dispatch(&l, "nope", json!({})).unwrap_err().to_string().contains("unknown command"));
         assert!(dispatch(&l, "get_note", json!({})).unwrap_err().to_string().contains("Invalid argument"));
         assert!(dispatch(&l, "get_note", json!({"id": "x"})).unwrap_err().to_string().starts_with("Not found"));
+    }
+
+    fn wait_job(l: &Arc<Library>, id: &str) -> Value {
+        for _ in 0..400 {
+            let s = dispatch_shared(l, "job_status", json!({ "jobId": id })).unwrap();
+            if s["state"] != "running" {
+                return s;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        panic!("job did not finish");
+    }
+
+    #[test]
+    fn transcription_flow_with_a_fake_engine() {
+        let d = tempfile::tempdir().unwrap();
+        let l = Arc::new(Library::open_with_clock(d.path(), Box::new(|| 1_760_000_000_000)).unwrap());
+        // no engine plugged in: clear error, status says unavailable
+        assert_eq!(dispatch(&l, "asr_status", json!({})).unwrap()["available"], false);
+        let wav = crate::media::synth_wav(3.0, 1.0, 300.0);
+        let id = l.import_media("a.wav", &wav, Some(5)).unwrap().item.id;
+        assert!(dispatch_shared(&l, "transcribe_start", json!({ "mediaId": id })).unwrap_err().to_string().contains("not available"));
+
+        l.set_asr(Arc::new(crate::asr::FakeAsr::new(1)));
+        let st = dispatch(&l, "asr_status", json!({})).unwrap();
+        assert_eq!(st["available"], true);
+        assert_eq!(st["settings"]["model"], "base.en");
+        assert_eq!(st["settings"]["autoTranscribe"], false);
+
+        // model not downloaded yet -> the job fails with a helpful message
+        let j = dispatch_shared(&l, "transcribe_start", json!({ "mediaId": id })).unwrap();
+        let r = wait_job(&l, j["jobId"].as_str().unwrap());
+        assert_eq!(r["state"], "error");
+        assert!(r["error"].as_str().unwrap().contains("not downloaded"));
+
+        // download (job with progress), then transcribe
+        let j = dispatch_shared(&l, "asr_download_start", json!({ "model": "base.en" })).unwrap();
+        assert_eq!(wait_job(&l, j["jobId"].as_str().unwrap())["state"], "done");
+        let j = dispatch_shared(&l, "transcribe_start", json!({ "mediaId": id })).unwrap();
+        let r = wait_job(&l, j["jobId"].as_str().unwrap());
+        assert_eq!(r["state"], "done", "{r}");
+        assert_eq!(r["result"]["segments"], 3, "blank marker dropped");
+        assert_eq!(r["result"]["language"], "en");
+        let t = l.get_transcript(&id).unwrap().unwrap();
+        assert_eq!(t.segments.len(), 3);
+        assert!(!t.has_synthesized_timing);
+        assert_eq!(t.segments[1].text, "This second line proves segments are stored.");
+        assert!(t.segments[2].start > t.segments[1].start);
+
+        // settings persist and are validated
+        let st = dispatch(&l, "asr_set_settings", json!({ "model": "base", "language": "ru", "autoTranscribe": true })).unwrap();
+        assert_eq!(st["settings"]["language"], "ru");
+        assert_eq!(l.asr_settings().unwrap().auto_transcribe, true);
+        assert!(dispatch(&l, "asr_set_settings", json!({ "model": "nope", "language": "en", "autoTranscribe": false })).is_err());
+        assert!(dispatch(&l, "asr_set_settings", json!({ "model": "base", "language": "../x", "autoTranscribe": false })).is_err());
+
+        // deleting a model flips it back to not installed
+        let st = dispatch(&l, "asr_delete_model", json!({ "model": "base.en" })).unwrap();
+        assert!(st["models"].as_array().unwrap().iter().all(|m| m["installed"] == false));
+    }
+
+    #[test]
+    fn transcription_can_be_cancelled_and_rejects_photos() {
+        let d = tempfile::tempdir().unwrap();
+        let l = Arc::new(Library::open_with_clock(d.path(), Box::new(|| 1_760_000_000_000)).unwrap());
+        l.set_asr(Arc::new(crate::asr::FakeAsr::new(60)));
+        let engine = l.asr().unwrap();
+        engine.download("base.en", Arc::new(|_, _| {}), Arc::new(|| false)).unwrap();
+        let wav = crate::media::synth_wav(3.0, 1.0, 300.0);
+        let id = l.import_media("a.wav", &wav, Some(5)).unwrap().item.id;
+        let j = dispatch_shared(&l, "transcribe_start", json!({ "mediaId": id })).unwrap();
+        let jid = j["jobId"].as_str().unwrap().to_string();
+        dispatch_shared(&l, "job_cancel", json!({ "jobId": jid })).unwrap();
+        let r = wait_job(&l, &jid);
+        assert_eq!(r["state"], "cancelled");
+        assert!(l.get_transcript(&id).unwrap().is_none(), "nothing stored when cancelled");
     }
 }

@@ -119,6 +119,8 @@ pub fn run() {
             let dir = std::env::var("TIMELINE_DATA_DIR").map(std::path::PathBuf::from).or_else(|_| app.path().app_data_dir())?;
             std::fs::create_dir_all(&dir)?;
             let lib = Library::open(&dir).map_err(|e| e.to_string())?;
+            // Local speech-to-text (whisper.cpp). Models are downloaded on first use into <data dir>/models.
+            lib.set_asr(Arc::new(timeline_asr::WhisperAsr::new(dir.join("models"))));
             app.manage(AppLib(Arc::new(lib)));
             Ok(())
         })

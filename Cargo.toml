@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/timeline-core", "crates/dev-bridge", "src-tauri"]
+members = ["crates/timeline-core", "crates/timeline-asr", "crates/dev-bridge", "src-tauri"]
 
 [workspace.package]
 version = "0.2.0"

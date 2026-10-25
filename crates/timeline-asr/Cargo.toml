@@ -1,0 +1,23 @@
+[package]
+name = "timeline-asr"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Local, offline speech-to-text for Timeline: whisper.cpp (via whisper-rs), model download with checksum, audio decoding to 16 kHz mono."
+
+[features]
+default = []
+# Opt-in GPU (Metal on macOS). Off by default: CPU is what CI builds and tests.
+gpu = ["whisper-rs/metal"]
+
+[dependencies]
+timeline-core = { path = "../timeline-core" }
+whisper-rs = "0.16"
+symphonia = { version = "0.5", default-features = false, features = ["mp3", "aac", "isomp4", "wav", "pcm", "flac", "ogg", "vorbis", "alac", "adpcm", "mkv"] }
+ureq = "2"
+sha2 = "0.10"
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
+hound = "3.5"

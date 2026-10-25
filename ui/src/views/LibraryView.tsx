@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { format } from 'date-fns';
-import { AudioLines, Captions, Download, Film, Image as ImageIcon, Trash2, Upload } from 'lucide-react';
+import { AudioLines, Captions, Download, Film, Image as ImageIcon, Mic, Trash2, Upload, X } from 'lucide-react';
 import { cmd, importBrowserFile, isTauri } from '../lib/api';
 import { useStore } from '../lib/store';
 import type { MediaItem, Transcript } from '../lib/types';
 import { MediaPlayer, type PlayerHandle } from '../components/MediaPlayer';
+import { AsrPanel } from '../components/AsrPanel';
+import { useAsr } from '../lib/asrStore';
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 const Icon = ({ k }: { k: MediaItem['kind'] }) => (k === 'audio' ? <AudioLines size={16} /> : k === 'video' ? <Film size={16} /> : <ImageIcon size={16} />);
@@ -16,12 +18,14 @@ export function LibraryView() {
 
   const importFiles = useCallback(async (files: FileList | File[]) => {
     let last: string | null = null; let dup = 0; let n = 0;
+    const fresh: MediaItem[] = [];
     for (const f of Array.from(files)) {
-      try { const o = await importBrowserFile(f); last = o.item.id; if (o.duplicate) dup++; else n++; } catch (e) { fail(e); }
+      try { const o = await importBrowserFile(f); last = o.item.id; if (o.duplicate) dup++; else { n++; fresh.push(o.item); } } catch (e) { fail(e); }
     }
     await refresh();
     if (last) openMedia(last);
     notify(`Imported ${n} file${n === 1 ? '' : 's'}${dup ? ` (${dup} already in library)` : ''}`);
+    useAsr.getState().autoTranscribe(fresh); // only when the user switched it on in settings
   }, [fail, refresh, openMedia, notify]);
 
   useEffect(() => { if (!selectedMediaId && media.length) openMedia(media[0].id); }, [selectedMediaId, media, openMedia]);
@@ -48,6 +52,7 @@ export function LibraryView() {
           ))}
           {!media.length && <li className="empty-small">Drop files here to import. Recordings are copied into your private library and de-duplicated.</li>}
         </ul>
+        <AsrPanel />
       </aside>
       {selected ? <MediaDetail key={selected.id} item={selected} /> : <div className="note-pane empty-pane"><AudioLines size={28} /><p>Import a recording to see it here.</p></div>}
       {drag && <div className="drop-overlay">Drop to import</div>}
@@ -63,8 +68,15 @@ function MediaDetail({ item }: { item: MediaItem }) {
   const player = useRef<PlayerHandle>(null);
   const trInput = useRef<HTMLInputElement>(null);
   const [confirm, setConfirm] = useState(false);
+  const [rearm, setRearm] = useState(false);
+  const rearmTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(rearmTimer.current), []);
+  const { status, jobs, waiting, version, load, transcribe, cancel } = useAsr();
+  const job = jobs.find((j) => j.state === 'running' && ((j.kind === 'transcribe' && j.subject === item.id) || (j.kind === 'asr-download' && j.subject === waiting[item.id])));
+  const busy = !!job || !!waiting[item.id];
 
-  useEffect(() => { cmd.getTranscript(item.id).then(setTr).catch(fail); }, [item.id, item.hasTranscript, fail]);
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => { cmd.getTranscript(item.id).then(setTr).catch(fail); }, [item.id, item.hasTranscript, version, fail]);
   useEffect(() => {
     if (seekTo == null) return;
     const h = setTimeout(() => { player.current?.seek(seekTo, true); useStore.setState({ seekTo: null }); }, 700);
@@ -110,13 +122,29 @@ function MediaDetail({ item }: { item: MediaItem }) {
       {item.kind !== 'photo' && (
         <div className="transcript" data-testid="transcript">
           <div className="transcript-head">
-            <h4><Captions size={15} /> Transcript {tr?.hasSynthesizedTiming && <small title="The file had no timestamps; timing is estimated.">estimated timing</small>}</h4>
+            <h4><Captions size={15} /> Transcript {tr?.language && <small data-testid="transcript-language">{tr.language}</small>} {tr?.hasSynthesizedTiming && <small title="The file had no timestamps; timing is estimated.">estimated timing</small>}</h4>
             <span className="spacer" />
+            {status?.available && !busy && (
+              <button className={`ghost ${rearm ? 'armed' : ''}`} data-testid="transcribe" title="Transcribe on this computer with whisper.cpp"
+                onClick={() => {
+                  if (tr && !rearm) { setRearm(true); clearTimeout(rearmTimer.current); rearmTimer.current = setTimeout(() => setRearm(false), 3000); return; }
+                  clearTimeout(rearmTimer.current); setRearm(false); transcribe(item.id);
+                }}>
+                <Mic size={14} /> {rearm ? 'Replace current transcript?' : tr ? 'Re-transcribe' : 'Transcribe'}
+              </button>
+            )}
             <button className="ghost" onClick={() => trInput.current?.click()} data-testid="attach-transcript">{tr ? 'Replace' : 'Attach'} (.srt .vtt .txt .json)</button>
             <input ref={trInput} type="file" hidden accept=".srt,.vtt,.txt,.json" data-testid="transcript-input" onChange={(e) => { const f = e.target.files?.[0]; if (f) attach(f); e.target.value = ''; }} />
             {tr && <button className="ghost" onClick={download}><Download size={14} /></button>}
             {tr && <button className="ghost" onClick={() => cmd.removeTranscript(item.id).then(() => { setTr(null); refresh(); }).catch(fail)}>Remove</button>}
           </div>
+          {busy && (
+            <div className="asr-job" data-testid="transcribe-progress">
+              <div className="bar"><i style={{ width: `${Math.round((job?.progress ?? 0) * 100)}%` }} /></div>
+              <small>{job?.message ?? 'Starting…'}</small>
+              <button className="ghost" data-testid="transcribe-cancel" onClick={() => job ? cancel(job.id) : undefined}><X size={13} /> Cancel</button>
+            </div>
+          )}
           {tr ? (
             <ol className="segments">
               {tr.segments.map((s, i) => (
@@ -125,7 +153,7 @@ function MediaDetail({ item }: { item: MediaItem }) {
                 </li>
               ))}
             </ol>
-          ) : <p className="muted">No transcript yet. Attach a subtitle or transcript file from Whisper, Buzz or any other tool — it becomes searchable by meaning.</p>}
+          ) : <p className="muted">No transcript yet. Press Transcribe to create one on this computer (a speech model is downloaded the first time), or attach a subtitle or transcript file (.srt .vtt .txt .json) from another tool. Transcripts are searchable by meaning.</p>}
         </div>
       )}
     </section>

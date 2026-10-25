@@ -42,11 +42,12 @@ Everything is local. The app data folder is `app.timeline.local` inside your sys
 macOS `~/Library/Application Support/app.timeline.local/`, Windows `%APPDATA%\app.timeline.local\`, Linux `~/.local/share/app.timeline.local/` (set `TIMELINE_DATA_DIR` to use a different folder).
 - `timeline.db` — one SQLite file with notes (Markdown text, folder, properties, tags, links), recordings/photos/videos (metadata), transcripts, search index, saved mind-map views and node positions.
 - `media/` — your recordings, photos, videos and note images, **copied in** and named by their SHA-256 hash (so importing the same file twice stores it once, and moving or deleting the originals afterwards does not affect Timeline).
+- `models/` — speech-to-text models you chose to download (150 MB–600 MB each; safe to delete, they are re-downloaded on demand).
 - `export/` — Markdown export (Library → "Export all as .md").
 Back up by copying that folder while the app is closed.
 
 ## Status — honest
 Verified on this Linux box: `cargo test --workspace` green (78 core + bridge + shell tests); vitest 17/17; Playwright 10/10 (Chrome, real Rust core) with screenshots; `cargo tauri build --no-bundle` compiles; the built binary launched under Xvfb and rendered the seeded timeline (`docs/screenshots/20-tauri-native-linux.png`).
-**Not verified:** macOS/Windows/iOS/Android builds; packaged `.dmg/.msi/.AppImage`; WKWebView behaviour (touch pinch, `tlmedia` Range audio seeking, native save dialog); the GitHub workflow; real embedding model / Whisper (not implemented); Tauri IPC paths beyond the Linux smoke launch (e2e drives the HTTP bridge, not IPC).
+**Not verified:** macOS/Windows/iOS/Android builds; packaged `.dmg/.msi/.AppImage`; WKWebView behaviour (touch pinch, `tlmedia` Range audio seeking, native save dialog); the GitHub workflow; real embedding model; whisper.cpp on real macOS/Windows hardware (it is compiled in CI and tested on Linux only); Tauri IPC paths beyond the Linux smoke launch (e2e drives the HTTP bridge, not IPC).
 
 See `docs/DECISIONS.md` for library choices and `THIRD_PARTY_NOTICES`.

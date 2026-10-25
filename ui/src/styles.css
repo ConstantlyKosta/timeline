@@ -311,3 +311,14 @@ button.danger-fill { background: var(--danger); border-color: var(--danger); col
 .graph-tip .gt-preview { color: var(--muted); display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
 .graph-tip .gt-tags { display: flex; flex-wrap: wrap; gap: 4px; color: var(--link); }
 .graph-tip .gt-props { color: var(--muted); font-size: 11.5px; } .graph-tip .gt-props b { color: var(--text); font-weight: 600; }
+
+/* speech-to-text */
+.asr-panel { margin: 8px 10px 12px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel2); font-size: 13px; }
+.asr-panel summary { cursor: pointer; display: flex; gap: 6px; align-items: center; font-weight: 600; }
+.asr-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 6px 0; } .asr-row.check { justify-content: flex-start; }
+.asr-models { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
+.asr-models li { display: grid; gap: 4px; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; } .asr-models li.on { border-color: var(--accent); background: var(--panel); }
+.asr-models li label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+.asr-dl { display: flex; align-items: center; gap: 6px; } .asr-dl .bar { flex: 1; } .asr-dl small { white-space: nowrap; }
+.asr-job { display: flex; align-items: center; gap: 10px; margin: 8px 0; } .asr-job .bar { flex: 1; min-width: 80px; }
+.ghost.armed { color: var(--danger); }

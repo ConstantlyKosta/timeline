@@ -118,6 +118,7 @@ pub struct Library {
     inner: Mutex<Inner>,
     clock: Box<dyn Fn() -> Ms + Send + Sync>,
     jobs: crate::jobs::Jobs,
+    asr: Mutex<Option<std::sync::Arc<dyn crate::asr::Asr>>>,
 }
 
 pub fn system_now_ms() -> Ms {
@@ -138,7 +139,7 @@ impl Library {
         let data_dir = data_dir.as_ref().to_path_buf();
         std::fs::create_dir_all(data_dir.join("media"))?;
         let conn = db::open(&data_dir.join("timeline.db"))?;
-        let lib = Library { data_dir, inner: Mutex::new(Inner { conn, search: SearchEngine::new(), parsed: HashMap::new() }), clock, jobs: Default::default() };
+        let lib = Library { data_dir, inner: Mutex::new(Inner { conn, search: SearchEngine::new(), parsed: HashMap::new() }), clock, jobs: Default::default(), asr: Mutex::new(None) };
         lib.rebuild_index()?;
         Ok(lib)
     }
@@ -627,6 +628,88 @@ impl Library {
             Self::index_media(&mut g, &r.item, None);
         }
         Ok(())
+    }
+
+    // ------------------------------------------------------------------ speech-to-text
+
+    /// Plugs in a speech-to-text engine (see [`crate::asr`]).
+    pub fn set_asr(&self, engine: std::sync::Arc<dyn crate::asr::Asr>) {
+        *self.asr.lock().unwrap_or_else(|e| e.into_inner()) = Some(engine);
+    }
+
+    pub fn asr(&self) -> Option<std::sync::Arc<dyn crate::asr::Asr>> {
+        self.asr.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+
+    pub fn asr_settings(&self) -> Result<crate::asr::AsrSettings> {
+        let d = crate::asr::AsrSettings::default();
+        Ok(crate::asr::AsrSettings {
+            model: self.meta("asr.model")?.unwrap_or(d.model),
+            language: self.meta("asr.language")?.unwrap_or(d.language),
+            auto_transcribe: self.meta("asr.auto")?.map(|v| v == "1").unwrap_or(d.auto_transcribe),
+        })
+    }
+
+    pub fn set_asr_settings(&self, s: &crate::asr::AsrSettings) -> Result<()> {
+        if s.language != "auto" && !(s.language.len() >= 2 && s.language.len() <= 3 && s.language.chars().all(|c| c.is_ascii_lowercase())) {
+            return Err(Error::InvalidArgument(format!("language {:?}", s.language)));
+        }
+        if let Some(a) = self.asr() {
+            if !a.models().iter().any(|m| m.id == s.model) {
+                return Err(Error::InvalidArgument(format!("unknown model {:?}", s.model)));
+            }
+        }
+        self.set_meta("asr.model", &s.model)?;
+        self.set_meta("asr.language", &s.language)?;
+        self.set_meta("asr.auto", if s.auto_transcribe { "1" } else { "0" })
+    }
+
+    pub fn asr_status(&self) -> Result<crate::asr::AsrStatus> {
+        let settings = self.asr_settings()?;
+        Ok(match self.asr() {
+            Some(a) => crate::asr::AsrStatus { available: true, backend: a.backend(), models: a.models(), settings },
+            None => crate::asr::AsrStatus { available: false, backend: String::new(), models: vec![], settings },
+        })
+    }
+
+    /// Transcribes one recording/video with the plugged-in engine and stores the result as its
+    /// transcript (replacing any earlier one). Runs inside a background job.
+    pub fn transcribe_media(&self, media_id: &str, model: Option<&str>, language: Option<&str>, ctx: &crate::jobs::JobCtx) -> Result<serde_json::Value> {
+        let engine = self.asr();
+        let engine = crate::asr::require(&engine)?;
+        let item = self.get_media(media_id)?;
+        if item.kind == MediaKind::Photo {
+            return Err(Error::InvalidArgument("photos cannot be transcribed".into()));
+        }
+        if item.is_missing {
+            return Err(Error::FileMissing(item.original_name.clone()));
+        }
+        let settings = self.asr_settings()?;
+        let model = model.map(str::to_string).unwrap_or(settings.model);
+        let lang = language.map(str::to_string).unwrap_or(settings.language);
+        let lang_opt = if lang == "auto" { None } else { Some(lang.as_str()) };
+        if !engine.models().iter().any(|m| m.id == model && m.installed) {
+            return Err(Error::Asr(format!("the speech model \"{model}\" is not downloaded yet. Download it first (needs internet once)")));
+        }
+        let (path, _) = self.media_file(media_id)?;
+        let c = ctx.clone();
+        let progress: crate::asr::ProgressFn = std::sync::Arc::new(move |p, m| c.progress(p, m));
+        let c = ctx.clone();
+        let cancel: crate::asr::CancelFn = std::sync::Arc::new(move || c.cancelled());
+        let out = engine.transcribe(&path, &model, lang_opt, progress, cancel.clone())?;
+        if cancel() {
+            return Err(Error::Asr("cancelled".into()));
+        }
+        let segments: Vec<TranscriptSegment> = crate::asr::clean_segments(out.segments)
+            .into_iter()
+            .enumerate()
+            .map(|(i, s)| TranscriptSegment { id: i, start: s.start, end: s.end.max(s.start), text: s.text, speaker: None })
+            .collect();
+        let n = segments.len();
+        let t = Transcript { segments, language: out.language.clone(), has_synthesized_timing: false };
+        self.store_transcript(media_id, &t)?;
+        let rtf = if out.audio_seconds > 0.0 { out.elapsed_seconds / out.audio_seconds } else { 0.0 };
+        Ok(serde_json::json!({ "mediaId": media_id, "segments": n, "language": out.language, "audioSeconds": out.audio_seconds, "elapsedSeconds": out.elapsed_seconds, "realTimeFactor": rtf, "model": model }))
     }
 
     pub fn export_transcript_text(&self, media_id: &str) -> Result<String> {

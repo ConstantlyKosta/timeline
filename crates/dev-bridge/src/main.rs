@@ -24,6 +24,11 @@ fn main() {
         }
     }
     let lib = Arc::new(timeline_core::Library::open(&data).expect("open library"));
+    if std::env::var("TIMELINE_ASR").as_deref() == Ok("fake") {
+        lib.set_asr(Arc::new(timeline_core::asr::FakeAsr::new(250)));
+    } else {
+        lib.set_asr(Arc::new(timeline_asr::WhisperAsr::new(data.join("models"))));
+    }
     println!("data dir: {}", data.display());
     let res = dev_bridge::serve(lib, dev_bridge::Config { static_dir }, &format!("{host}:{port}"), |a| println!("dev-bridge listening on http://{a}"));
     if let Err(e) = res {

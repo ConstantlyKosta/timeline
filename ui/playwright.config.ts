@@ -19,7 +19,7 @@ export default defineConfig({
     launchOptions: { args: ['--autoplay-policy=no-user-gesture-required'] },
   },
   webServer: {
-    command: `rm -rf e2e-data && cargo run -q -p dev-bridge -- --data ./e2e-data --port ${PORT} --static ui/dist`,
+    command: `rm -rf e2e-data && TIMELINE_ASR=fake cargo run -q -p dev-bridge -- --data ./e2e-data --port ${PORT} --static ui/dist`,
     cwd: '..',
     url: `http://127.0.0.1:${PORT}/`,
     reuseExistingServer: false,

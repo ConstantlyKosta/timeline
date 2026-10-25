@@ -3,6 +3,7 @@
 //! Layers: `models` (data) → `db` (SQLite) → `library` (service) → `dispatch` (JSON commands).
 //! `timeline` holds the zoom/cluster/layout math (mirrored in TypeScript for per-frame zooming).
 
+pub mod asr;
 pub mod db;
 pub mod dispatch;
 pub mod error;

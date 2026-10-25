@@ -1,5 +1,5 @@
 // One command surface, two transports: Tauri IPC (desktop/mobile app) and HTTP (dev bridge for the browser / Playwright).
-import type { ExportResult, ImportSummary, JobInfo, Graph, GraphRaw, GraphViewRow, NodePos, ImportOutcome, MediaItem, Note, NoteContext, NoteRef, NoteSummary, SearchHit, Stats, TagCount, TimelineEntry, Transcript } from './types';
+import type { AsrSettings, AsrStatus, ExportResult, ImportSummary, JobInfo, Graph, GraphRaw, GraphViewRow, NodePos, ImportOutcome, MediaItem, Note, NoteContext, NoteRef, NoteSummary, SearchHit, Stats, TagCount, TimelineEntry, Transcript } from './types';
 
 export interface Api {
   /** Raw command dispatch (name + camelCase JSON args). */
@@ -104,6 +104,12 @@ export const cmd = {
     api.call<ImportSummary>('import_inline', { files, vaults, tzOffsetMinutes: -new Date().getTimezoneOffset() }),
   jobStatus: (jobId: string) => api.call<JobInfo>('job_status', { jobId }),
   jobCancel: (jobId: string) => api.call<boolean>('job_cancel', { jobId }),
+  jobList: () => api.call<JobInfo[]>('job_list'),
+  asrStatus: () => api.call<AsrStatus>('asr_status'),
+  asrSetSettings: (s: AsrSettings) => api.call<AsrStatus>('asr_set_settings', { ...s }),
+  asrDeleteModel: (model: string) => api.call<AsrStatus>('asr_delete_model', { model }),
+  asrDownloadStart: (model: string) => api.call<{ jobId: string }>('asr_download_start', { model }),
+  transcribeStart: (mediaId: string, model?: string, language?: string) => api.call<{ jobId: string }>('transcribe_start', { mediaId, model, language }),
   exportMarkdown: () => api.call<ExportResult>('export_markdown'),
 };
 

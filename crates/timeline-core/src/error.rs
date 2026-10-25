@@ -14,6 +14,8 @@ pub enum Error {
     InvalidArgument(String),
     #[error("File missing: {0}")]
     FileMissing(String),
+    #[error("Speech-to-text: {0}")]
+    Asr(String),
     #[error("Database error: {0}")]
     Db(#[from] rusqlite::Error),
     #[error("I/O error: {0}")]
