@@ -1,22 +1,28 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
-import { AudioLines, Camera, FileText, Film, Plus } from 'lucide-react';
+import { AudioLines, Camera, ExternalLink, FileText, Film, Plus, Trash2, ZoomIn } from 'lucide-react';
+import { cmd, api } from '../lib/api';
+import { ContextMenu, type MenuItem } from '../components/ContextMenu';
+import { previewLayout, usesPreviews, type PreviewCard } from '../lib/preview';
 import { useStore } from '../lib/store';
 import {
   MS_PER_DAY, extent, layout, levelPointsPerDay, makeMapping, mappingLevel, snap, timeAt, xOf, zoom, zoomIn,
   type PlacedCluster, type PlacedItem, type TimeMapping, type ZoomLevel,
 } from '../lib/timeline';
 import { ticks } from '../lib/ticks';
-import type { EntryKind } from '../lib/types';
+import type { EntryKind, Ms } from '../lib/types';
 
 const AXIS_H = 34;
+interface PlacedClusterLike { start: Ms; end: Ms; count: number }
 const kindIcon: Record<EntryKind, JSX.Element> = {
   note: <FileText size={14} />, recording: <AudioLines size={14} />, photo: <Camera size={14} />, video: <Film size={14} />,
 };
 const fmtDur = (s: number) => (s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m` : s >= 60 ? `${Math.round(s / 60)} min` : s > 0 ? `${Math.round(s)} s` : '');
 
 export function TimelineView() {
-  const { entries, tl, setTl, openNote, openMedia, newNote } = useStore();
+  const { entries, tl, setTl, openNote, openMedia, newNote, refresh, fail, notify } = useStore();
+  const [menu, setMenu] = useState<{ x: number; y: number; ms: Ms; target: { id: string; kind: EntryKind; title: string } | { cluster: PlacedClusterLike } | null } | null>(null);
+  const [confirmDel, setConfirmDel] = useState<{ id: string; kind: EntryKind; title: string } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const [vw, setVw] = useState(900);
   const [vh, setVh] = useState(500);
@@ -144,7 +150,7 @@ export function TimelineView() {
   const dragRef = useRef<{ x: number; scroll: number; moved: boolean } | null>(null);
   const pinchRef = useRef<number | null>(null);
   const onPointerDown = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('button')) return;
+    if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return;
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.current.size === 1 && viewRef.current) dragRef.current = { x: e.clientX, scroll: viewRef.current.scroll, moved: false };
@@ -188,8 +194,11 @@ export function TimelineView() {
   };
 
   // ---- layout + visible window
-  const lay = useMemo(() => layout(entries, mapping), [entries, mapping]);
   const level = mappingLevel(mapping);
+  const previews = usesPreviews(mapping);
+  const availH = Math.max(120, vh - AXIS_H);
+  const lay = useMemo(() => (previews ? { items: [], clusters: [], contentHeight: 0 } : layout(entries, mapping)), [entries, mapping, previews]);
+  const pl = useMemo(() => (previews ? previewLayout(entries, mapping, availH - 12) : null), [entries, mapping, previews, availH]);
   const margin = 400;
   const vis = (f: { x: number; width: number }) => f.x + f.width >= scroll - margin && f.x <= scroll + vw + margin;
   const tickList = useMemo(
@@ -207,6 +216,37 @@ export function TimelineView() {
     if (wasDrag()) return;
     const mid = (c.start + c.end) / 2;
     animateTo((m) => zoomIn(m, mid, vw));
+  };
+  const onContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const rect = ref.current!.getBoundingClientRect();
+    const ms = timeAt(mapping, scroll + e.clientX - rect.left);
+    const el = (e.target as HTMLElement).closest('[data-entry-id]') as HTMLElement | null;
+    const cl = (e.target as HTMLElement).closest('[data-cluster-start]') as HTMLElement | null;
+    if (el) setMenu({ x: e.clientX, y: e.clientY, ms, target: { id: el.dataset.entryId!, kind: el.dataset.kind as EntryKind, title: el.dataset.title ?? '' } });
+    else if (cl) setMenu({ x: e.clientX, y: e.clientY, ms, target: { cluster: { start: Number(cl.dataset.clusterStart), end: Number(cl.dataset.clusterEnd), count: Number(cl.dataset.clusterCount) } } });
+    else setMenu({ x: e.clientX, y: e.clientY, ms, target: null });
+  };
+  const menuItems = (): MenuItem[] => {
+    if (!menu) return [];
+    const t = menu.target;
+    const newHere: MenuItem = { label: 'New note here', icon: <Plus size={14} />, testId: 'ctx-new-note', onSelect: () => newNote('', menu.ms).catch(fail) };
+    if (!t) return [newHere];
+    if ('cluster' in t) {
+      const c = t.cluster;
+      return [{ label: `Zoom in (${c.count} entries)`, icon: <ZoomIn size={14} />, testId: 'ctx-zoom', onSelect: () => animateTo((m) => zoomIn(m, (c.start + c.end) / 2, vw)) }, newHere];
+    }
+    return [
+      { label: 'Open', icon: <ExternalLink size={14} />, testId: 'ctx-open', onSelect: () => (t.kind === 'note' ? openNote(t.id) : openMedia(t.id)) },
+      newHere,
+      { label: 'Delete…', icon: <Trash2 size={14} />, danger: true, testId: 'ctx-delete', onSelect: () => setConfirmDel(t) },
+    ];
+  };
+  const doDelete = async () => {
+    const d = confirmDel;
+    setConfirmDel(null);
+    if (!d) return;
+    try { await (d.kind === 'note' ? cmd.deleteNote(d.id) : cmd.deleteMedia(d.id)); await refresh(); notify(`Deleted “${d.title || 'Untitled'}”`); } catch (e) { fail(e); }
   };
   const entryById = useMemo(() => new Map(entries.map((e) => [e.id, e])), [entries]);
 
@@ -228,7 +268,7 @@ export function TimelineView() {
       </div>
       <div
         className="tl-surface" ref={ref} tabIndex={0} data-testid="tl-surface"
-        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onKeyDown={onKeyDown}
+        onContextMenu={onContextMenu} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onKeyDown={onKeyDown}
       >
         <div className="tl-axis" style={{ height: AXIS_H }}>
           {tickList.map((t) => (
@@ -241,9 +281,9 @@ export function TimelineView() {
           {tickList.map((t) => <div key={t.t} className={`gridline ${t.major ? 'major' : ''}`} style={{ left: xOf(mapping, t.t) - scroll }} />)}
           {nowX > -2 && nowX < vw + 2 && <div className="now-line" style={{ left: nowX }}><span>now</span></div>}
         </div>
-        <div className="tl-content" style={{ top: AXIS_H, height: Math.max(vh - AXIS_H, lay.contentHeight) }}>
+        <div className="tl-content" style={{ top: AXIS_H, height: Math.max(vh - AXIS_H, lay.contentHeight, pl?.contentHeight ?? 0) }}>
           {lay.clusters.filter((c) => vis(c.frame)).map((c) => (
-            <button key={c.id} className="block cluster" data-testid="cluster" data-cluster-count={c.count} data-narrow={c.frame.width < 84 ? 1 : 0}
+            <button key={c.id} className="block cluster" data-testid="cluster" data-cluster-count={c.count} data-cluster-start={c.start} data-cluster-end={c.end} data-narrow={c.frame.width < 84 ? 1 : 0}
               style={{ left: c.frame.x - scroll, top: c.frame.y, width: c.frame.width, height: c.frame.height }}
               onClick={() => openCluster(c)} title={`${c.count} entries — click to zoom in`}>
               <span className="count">{c.count}</span>
@@ -255,7 +295,7 @@ export function TimelineView() {
           {lay.items.filter((i) => vis(i.frame)).map((i) => {
             const e = entryById.get(i.id);
             return (
-              <button key={i.id} className={`block item ${i.kind}`} data-testid="entry" data-kind={i.kind}
+              <button key={i.id} className={`block item ${i.kind}`} data-testid="entry" data-kind={i.kind} data-entry-id={i.id} data-title={i.title}
                 style={{ left: i.frame.x - scroll, top: i.frame.y, width: i.frame.width, height: i.frame.height }}
                 onClick={() => openItem(i)} title={i.title}>
                 <span className="ico">{kindIcon[i.kind]}</span>
@@ -267,9 +307,53 @@ export function TimelineView() {
               </button>
             );
           })}
+          {pl && pl.clusters.filter((c) => vis(c.frame)).map((c) => (
+            <button key={`c${c.id}`} className="pdot-cluster" data-testid="cluster" data-cluster-count={c.count} data-cluster-start={c.start} data-cluster-end={c.end}
+              style={{ left: c.frame.x - scroll, top: c.frame.y, width: c.frame.width, height: c.frame.height }}
+              onClick={() => openCluster({ ...c, frame: c.frame, title: '', lane: 0 })} title={`${c.count} entries (${c.noteCount} notes) — click to zoom in`}>{c.count}</button>
+          ))}
+          {pl && pl.dots.filter((d) => vis(d.frame)).map((d) => (
+            <button key={`d${d.id}`} className={`pdot ${d.kind}`} data-testid="entry" data-tier="dot" data-kind={d.kind} data-entry-id={d.id} data-title={d.title}
+              style={{ left: d.frame.x - scroll, top: d.frame.y, width: d.frame.width, height: d.frame.height }}
+              onClick={() => { if (!wasDrag()) (d.kind === 'note' ? openNote(d.id) : openMedia(d.id)); }} title={d.title} aria-label={d.title} />
+          ))}
+          {pl && pl.cards.filter((c) => vis(c.frame)).map((c) => (
+            <PCard key={c.id} c={c} scroll={scroll} onOpen={() => { if (!wasDrag()) (c.kind === 'note' ? openNote(c.id) : openMedia(c.id)); }} />
+          ))}
           {!entries.length && <div className="empty">Nothing here yet. Create a note or import a recording from the Library.</div>}
         </div>
       </div>
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems()} header={menu.target && 'id' in menu.target ? menu.target.title || 'Untitled' : format(menu.ms, 'EEE d MMM yyyy, HH:mm')} onClose={() => setMenu(null)} />}
+      {confirmDel && (
+        <div className="modal-back" data-testid="confirm-delete" role="alertdialog">
+          <div className="modal">
+            <h3>Delete “{confirmDel.title || 'Untitled'}”?</h3>
+            <p className="muted">This {confirmDel.kind === 'note' ? 'note' : 'item'} will be removed from your library. This can’t be undone.</p>
+            <footer>
+              <button onClick={() => setConfirmDel(null)} data-testid="delete-cancel">Cancel</button>
+              <button className="primary danger-fill" onClick={doDelete} data-testid="delete-confirm">Delete</button>
+            </footer>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function PCard({ c, scroll, onOpen }: { c: PreviewCard; scroll: number; onOpen: () => void }) {
+  const photo = c.kind === 'photo' && c.thumb;
+  const dur = c.duration > 0 && c.tier !== 'title' ? fmtDur(c.duration) : '';
+  return (
+    <button className={`block pcard ${c.kind} tier-${c.tier} ${photo ? 'photo-card' : ''}`} data-testid="entry" data-tier={c.tier} data-kind={c.kind} data-entry-id={c.id} data-title={c.title}
+      style={{ left: c.frame.x - scroll, top: c.frame.y, width: c.frame.width, height: c.frame.height }} onClick={onOpen} title={c.title}>
+      {photo && <img className="pthumb-bg" src={api.mediaUrl(c.id)} alt="" loading="lazy" draggable={false} />}
+      <span className="ico">{kindIcon[c.kind]}</span>
+      <span className="label">
+        <b>{c.title || 'Untitled'}</b>
+        {c.text && <small style={{ WebkitLineClamp: c.lines }}>{c.text}</small>}
+        {dur && <small className="dur">{dur}</small>}
+      </span>
+      {c.thumb && !photo && <img className="pthumb" src={api.mediaUrl(c.thumb)} alt="" loading="lazy" draggable={false} />}
+    </button>
   );
 }

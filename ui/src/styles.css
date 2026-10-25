@@ -242,3 +242,25 @@ code { font-family: var(--mono); background: var(--code-bg); padding: 1px 5px; b
 .import-summary .stats li { background: var(--panel2); border-radius: 8px; padding: 8px 10px; } .import-summary .stats b { font-size: 18px; margin-right: 4px; }
 .import-summary .stats li.bad b, .issues li.bad { color: var(--danger); }
 .issues { max-height: 180px; overflow: auto; font-size: 12px; padding-left: 16px; } .issues li { margin: 3px 0; }
+
+/* timeline preview cards (week/month), dots, context menu */
+.pcard { flex-direction: row; align-items: flex-start; }
+.pcard.tier-title { align-items: center; padding: 4px 8px; }
+.pcard .label { flex: 1; }
+.pcard.tier-rich .label b, .pcard.tier-medium .label b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 13px; }
+.pcard .label small { margin-top: 2px; }
+.pcard .label small.dur { color: var(--kind); font-weight: 600; }
+.pthumb { flex: none; width: 56px; height: 56px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); background: var(--panel2); }
+.photo-card { padding: 0; color: #fff; }
+.photo-card .pthumb-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.photo-card .ico, .photo-card .label { position: relative; z-index: 1; text-shadow: 0 1px 3px rgba(0,0,0,.7); } .photo-card .label { align-self: flex-end; padding: 6px 8px; } .photo-card .label b { color: #fff; } .photo-card .ico { margin: 6px 0 0 8px; color: #fff; }
+.pdot { position: absolute; border-radius: 50%; padding: 0; border: 2px solid var(--panel); background: var(--kind, var(--cluster)); box-shadow: 0 0 0 1px var(--kind, var(--cluster)); }
+.pdot.note { --kind: var(--note); } .pdot.recording { --kind: var(--recording); } .pdot.photo { --kind: var(--photo); } .pdot.video { --kind: var(--video); }
+.pdot:hover { transform: scale(1.4); z-index: 3; }
+.pdot-cluster { position: absolute; padding: 0; justify-content: center; border-radius: 999px; background: var(--text); color: var(--bg); font-weight: 700; font-size: 11px; border: 2px solid var(--panel); }
+.pdot-cluster:hover { background: var(--text); filter: brightness(1.2); }
+.ctx-menu { position: fixed; z-index: 120; min-width: 180px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); padding: 4px; display: flex; flex-direction: column; }
+.ctx-menu button { border: 0; background: none; justify-content: flex-start; border-radius: 6px; padding: 7px 10px; }
+.ctx-menu button:hover { background: var(--accent-soft); } .ctx-menu button.danger { color: var(--danger); }
+.ctx-head { padding: 5px 10px 6px; font-size: 11px; color: var(--muted); max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid var(--border); margin-bottom: 3px; }
+button.danger-fill { background: var(--danger); border-color: var(--danger); color: #fff; }

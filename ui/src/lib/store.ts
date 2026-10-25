@@ -125,3 +125,6 @@ export const useStore = create<State>((set, get) => ({
     if (!get().ready) set({ error: msg });
   },
 }));
+
+// Test hook (used by the Playwright suite to jump the timeline to a date); harmless in production.
+if (typeof window !== 'undefined') (window as unknown as { __tl: unknown }).__tl = { setTl: (tl: { ppd: number; centerMs: number }) => useStore.getState().setTl(tl) };

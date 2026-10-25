@@ -58,3 +58,10 @@ Logseq/SiYuan/Zettlr (wiki-links, backlinks, live preview, quick switcher), Jopl
 - **Attachments**: `![alt](rel/path.png)` and `![[image.png]]` are copied into the content-addressed media store as hidden rows (`media_item.attachment = 1`, not shown in the library) and the body is rewritten to `![alt](media:ID)`, the same form pasted images use. Remote URLs and code blocks are untouched.
 - **Obsidian**: a folder containing `.obsidian/` is flagged as a vault; all dot-folders (`.obsidian`, `.git`, `.trash`) and `node_modules` are skipped.
 - No YAML crate: the front-matter subset notes actually use (scalars, inline/block lists, `|`/`>` text; nested maps kept as raw text) is ~150 lines and avoids an unmaintained dependency (`serde_yaml` is archived).
+
+## v0.2 — Timeline previews and context menu
+
+- **Preview cards at Week and Month zoom** (`ui/src/lib/preview.ts`, TS-only, covered by `preview.test.ts`; the Rust↔TS golden layout is untouched and still drives Day). Every entry starts at the richest card its zoom allows (rich: title + 4 lines + thumbnail, medium: title + 2 lines, title chip, dot). Card width scales with points-per-day (clamped), thumbnails appear only when the rich card is ≥ 200 px wide. Cards that collide horizontally form a *crowd*; a crowd is stacked into lanes, and if it needs more height than the viewport has, its richest cards are demoted one tier and the layout re-solved until it fits. Touching dots merge into a count badge. Notes with nothing to preview start as title chips. Only the on-screen window is rendered (virtualised) and layout of 5 000 notes is asserted < 500 ms in the unit tests.
+- Thumbnails use the original media file (no thumbnail cache yet) — fine for dozens on screen; a resized-thumbnail cache is a later optimisation.
+- **Right-click on the timeline**: empty space → "New note here" (dated at the time under the cursor, opens in the editor); an entry → Open / New note here / Delete… (confirmation dialog); a cluster → Zoom in. Touch long-press is not wired (mobile browsers differ); the "Note here" button remains.
+- `window.__tl.setTl` is a tiny test hook so Playwright can jump the timeline to a date.
