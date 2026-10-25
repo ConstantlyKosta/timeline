@@ -196,9 +196,20 @@ code { font-family: var(--mono); background: var(--code-bg); padding: 1px 5px; b
 .switcher-content [cmdk-item][data-selected='true'] { background: var(--accent); color: var(--accent-text); } .switcher-content [cmdk-item][data-selected='true'] small { color: inherit; opacity: .8; }
 .switcher-content [cmdk-empty] { padding: 18px; text-align: center; color: var(--muted); }
 
+/* per-note mind map (Markmap) */
+.note-body.with-map { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .note-body.with-map .context { display: none; }
+.markmap-panel { position: relative; min-height: 0; border-left: 1px solid var(--border); background: var(--panel2);
+  --markmap-text-color: var(--text); --markmap-a-color: var(--link); --markmap-code-bg: var(--code-bg); --markmap-code-color: var(--text); --markmap-circle-open-bg: var(--panel); }
+.markmap-panel svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.markmap-panel .fit { position: absolute; top: 8px; right: 8px; z-index: 2; padding: 4px 6px; }
+.markmap-panel .markmap-node { cursor: pointer; } .markmap-panel .markmap-node circle { cursor: pointer; }
+.markmap-empty { position: absolute; inset: 40% 20px auto; text-align: center; z-index: 1; margin: 0; }
+.note-head .ghost.on { background: var(--accent-soft); border-color: var(--accent); }
+
 /* responsive: tablet / phone */
 @media (max-width: 900px) {
   .note-body { grid-template-columns: 1fr; } .context { display: none; }
+  .note-body.with-map { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 42%); } .markmap-panel { border-left: 0; border-top: 1px solid var(--border); }
   .notes, .library { grid-template-columns: 1fr; }
   .notes[data-has-note='true'] .note-list, .library[data-has-item='true'] .note-list { display: none; }
   .notes[data-has-note='false'] .note-pane, .library[data-has-item='false'] .note-pane { display: none; }

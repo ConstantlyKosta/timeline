@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
-import { ArrowLeft, Bold, CalendarDays, Code, Download, FileText, Heading1, Image as ImageIcon, Italic, Link2, List, ListChecks, Plus, Quote, SquareCode, Strikethrough, Table2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Bold, CalendarDays, Code, Download, FileText, Heading1, Image as ImageIcon, Italic, Link2, List, ListChecks, Network, Plus, Quote, SquareCode, Strikethrough, Table2, Trash2 } from 'lucide-react';
 import { cmd, importBrowserFile } from '../lib/api';
 import { useStore } from '../lib/store';
 import type { Note, NoteContext } from '../lib/types';
 import { VirtualList } from '../components/VirtualList';
 import { ImportButtons, useImportActions } from '../components/ImportDialog';
 import { Editor, type EditorHandle } from '../editor/Editor';
+import { MarkmapPanel } from '../components/MarkmapPanel';
 import { insertCodeBlock, insertTable, linePrefix, wrap } from '../editor/commands';
 
 const toLocalInput = (ms: number) => format(new Date(ms), "yyyy-MM-dd'T'HH:mm");
@@ -71,11 +72,16 @@ function NotePane({ id, onBack, onTag, onOpenTitle, onDeleted }: { id: string; o
   const [status, setStatus] = useState<'saved' | 'saving' | 'error'>('saved');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const editor = useRef<EditorHandle>(null);
+  const [showMap, setShowMapRaw] = useState(() => localStorage.getItem('timeline.noteMap') === '1');
+  const setShowMap = (v: boolean) => { setShowMapRaw(v); localStorage.setItem('timeline.noteMap', v ? '1' : '0'); };
+  const [liveBody, setLiveBody] = useState('');
+  const bodyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pending = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const loadCtx = useCallback(() => cmd.noteContext(id).then(setCtx).catch(() => undefined), [id]);
-  useEffect(() => { cmd.getNote(id).then(setNote).catch(fail); loadCtx(); }, [id, fail, loadCtx]);
+  useEffect(() => { cmd.getNote(id).then((n) => { setNote(n); setLiveBody(n.body); }).catch(fail); loadCtx(); }, [id, fail, loadCtx]);
+  useEffect(() => () => clearTimeout(bodyTimer.current), []);
 
   const flush = useCallback(async () => {
     clearTimeout(timer.current);
@@ -93,6 +99,8 @@ function NotePane({ id, onBack, onTag, onOpenTitle, onDeleted }: { id: string; o
 
   const onChange = useCallback((doc: string) => {
     pending.current = doc;
+    clearTimeout(bodyTimer.current);
+    bodyTimer.current = setTimeout(() => setLiveBody(doc), 250); // the mind map follows typing, lightly debounced
     setStatus('saving');
     clearTimeout(timer.current);
     timer.current = setTimeout(flush, 450);
@@ -125,6 +133,7 @@ function NotePane({ id, onBack, onTag, onOpenTitle, onDeleted }: { id: string; o
             onChange={(e) => { const ms = new Date(e.target.value).getTime(); if (!Number.isNaN(ms)) cmd.updateNote(id, { date: ms }).then((n) => { setNote(n); refresh(); }).catch(fail); }} />
         </label>
         <span className="spacer" />
+        <button className={`ghost ${showMap ? 'on' : ''}`} data-testid="toggle-note-map" aria-pressed={showMap} title="Show this note as a mind map (headings and bullets)" onClick={() => setShowMap(!showMap)}><Network size={14} /> Mind map</button>
         <span className={`save-state ${status}`} data-testid="save-state">{status === 'saved' ? 'Saved' : status === 'saving' ? 'Saving…' : 'Not saved'}</span>
         <button className={`ghost danger ${confirmDelete ? 'armed' : ''}`} data-testid="delete-note"
           onClick={() => { if (!confirmDelete) { setConfirmDelete(true); setTimeout(() => setConfirmDelete(false), 3000); } else cmd.deleteNote(id).then(onDeleted).catch(fail); }}>
@@ -147,10 +156,17 @@ function NotePane({ id, onBack, onTag, onOpenTitle, onDeleted }: { id: string; o
         <button title="Code block" onClick={withView(insertCodeBlock)}><SquareCode size={15} /></button>
         <button title="Insert image" onClick={pickImage}><ImageIcon size={15} /></button>
       </div>
-      <div className="note-body">
+      <div className={`note-body ${showMap ? 'with-map' : ''}`}>
         <div className="editor-col">
           <Editor ref={editor} noteId={id} initialDoc={note.body} onChange={onChange} onOpenLink={(t) => flush().then(() => onOpenTitle(t))} onTag={onTag} />
         </div>
+        {showMap && (
+          <MarkmapPanel markdown={liveBody} title={note.title} onJump={(line) => withView((v) => {
+            const l = v.state.doc.line(Math.min(v.state.doc.lines, line + 1));
+            v.dispatch({ selection: { anchor: l.from }, scrollIntoView: true });
+            v.focus();
+          })()} />
+        )}
         <aside className="context" data-testid="context-panel">
           {ctx && (
             <>

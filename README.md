@@ -1,6 +1,6 @@
 # Timeline (Tauri rebuild)
 
-Privacy-first, local-first autobiographical memory: Markdown notes (live preview, `[[wiki-links]]`, `#tags`, backlinks, tables, tasks, code), a mind map of your notes, audio recordings with transcripts, and a zoomable **Month / Week / Day** timeline. Everything stays on your machine in one SQLite file plus a `media/` folder. Hybrid search (keyword + hashed-TF-IDF "meaning").
+Privacy-first, local-first autobiographical memory: Markdown notes (live preview, `[[wiki-links]]`, `#tags`, backlinks, tables, tasks, code), a mind map of your notes (plus a per-note outline mind map), audio recordings with transcripts, and a zoomable **Month / Week / Day** timeline. Everything stays on your machine in one SQLite file plus a `media/` folder. Hybrid search (keyword + hashed-TF-IDF "meaning").
 
 Layout: `crates/timeline-core` (Rust engine, 78 tests) · `crates/dev-bridge` (HTTP server for tests/dev) · `src-tauri` (desktop/mobile shell) · `ui` (React + TypeScript + Vite) · `docs/` (decisions, screenshots).
 
