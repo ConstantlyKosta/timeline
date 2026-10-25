@@ -2,8 +2,11 @@
   "entries": [
     {
       "duration": 0.0,
+      "folder": "",
       "id": "a",
+      "image": null,
       "kind": "note",
+      "preview": "",
       "snippet": "snippet a",
       "start": 1760000000000,
       "tags": [
@@ -13,8 +16,11 @@
     },
     {
       "duration": 1800.0,
+      "folder": "",
       "id": "b",
+      "image": null,
       "kind": "recording",
+      "preview": "",
       "snippet": "snippet b",
       "start": 1760003600000,
       "tags": [
@@ -24,8 +30,11 @@
     },
     {
       "duration": 5400.0,
+      "folder": "",
       "id": "c",
+      "image": null,
       "kind": "recording",
+      "preview": "",
       "snippet": "snippet c",
       "start": 1760177800000,
       "tags": [
@@ -35,8 +44,11 @@
     },
     {
       "duration": 0.0,
+      "folder": "",
       "id": "d",
+      "image": null,
       "kind": "photo",
+      "preview": "",
       "snippet": "snippet d",
       "start": 1760178800000,
       "tags": [],
@@ -44,8 +56,11 @@
     },
     {
       "duration": 0.0,
+      "folder": "",
       "id": "e",
+      "image": null,
       "kind": "note",
+      "preview": "",
       "snippet": "snippet e",
       "start": 1760777600000,
       "tags": [
@@ -56,8 +71,11 @@
     },
     {
       "duration": 120.0,
+      "folder": "",
       "id": "f",
+      "image": null,
       "kind": "video",
+      "preview": "",
       "snippet": "snippet f",
       "start": 1760777601000,
       "tags": [
@@ -67,8 +85,11 @@
     },
     {
       "duration": 0.0,
+      "folder": "",
       "id": "g",
+      "image": null,
       "kind": "note",
+      "preview": "",
       "snippet": "snippet g",
       "start": 1763456000000,
       "tags": [],

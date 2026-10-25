@@ -443,6 +443,9 @@ mod tests {
             title: format!("T-{id}"),
             snippet: format!("snippet {id}"),
             tags: tags.iter().map(|s| s.to_string()).collect(),
+            preview: String::new(),
+            image: None,
+            folder: String::new(),
         }
     }
 

@@ -11,6 +11,11 @@ export interface TimelineEntry {
   title: string;
   snippet: string;
   tags: string[];
+  /** Markdown-stripped preview (first meaningful lines, newline-separated). */
+  preview?: string;
+  /** Media id of the first image in a note. */
+  image?: string | null;
+  folder?: string;
 }
 
 export interface Note {
@@ -20,6 +25,10 @@ export interface Note {
   date: Ms;
   createdAt: Ms;
   updatedAt: Ms;
+  folder?: string;
+  sourcePath?: string | null;
+  slug?: string | null;
+  properties?: Record<string, unknown>;
 }
 export interface NoteSummary {
   id: string;
@@ -28,6 +37,7 @@ export interface NoteSummary {
   updatedAt: Ms;
   snippet: string;
   tags: string[];
+  folder?: string;
   taskCount: number;
   doneCount: number;
 }
@@ -85,3 +95,33 @@ export interface Stats {
   indexedDocuments: number; embedding: string;
 }
 export interface ExportResult { dir: string; count: number }
+
+export interface FileIssue { path: string; reason: string }
+export interface ImportSummary {
+  filesSeen: number;
+  imported: number;
+  skippedDuplicate: number;
+  skippedOther: number;
+  errorCount: number;
+  skipped: FileIssue[];
+  errors: FileIssue[];
+  attachmentsImported: number;
+  attachmentsMissing: number;
+  linksResolved: number;
+  linksUnresolved: number;
+  folders: number;
+  vaults: string[];
+  cancelled: boolean;
+  elapsedMs: number;
+  firstNoteId: string | null;
+}
+export interface JobInfo {
+  id: string;
+  kind: string;
+  state: 'running' | 'done' | 'error' | 'cancelled';
+  progress: number;
+  message: string;
+  result: unknown;
+  error: string | null;
+  subject: string | null;
+}

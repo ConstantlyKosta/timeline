@@ -51,7 +51,7 @@ impl ParsedNote {
         let mut seen = std::collections::HashSet::new();
         let mut out = Vec::new();
         for l in &self.links {
-            if seen.insert(normalize_title(&l.target)) {
+            if seen.insert(crate::graph::target_key(&l.target)) {
                 out.push(l.target.clone());
             }
         }
@@ -338,6 +338,65 @@ pub fn snippet(markdown: &str, max_len: usize) -> String {
     }
 }
 
+/// Preview for cards: the first meaningful plain-text lines (Markdown stripped, newline-separated),
+/// without the line that holds the note's own `# Title`, up to `max_chars`.
+pub fn preview(markdown: &str, max_chars: usize) -> String {
+    let body = markdown.replace("\r\n", "\n");
+    let mut lines = body.lines();
+    // drop a leading H1 (it is shown as the card title)
+    let mut rest: Vec<&str> = Vec::new();
+    let mut dropped = false;
+    for l in lines.by_ref() {
+        if !dropped && l.trim().is_empty() {
+            continue;
+        }
+        if !dropped {
+            dropped = true;
+            if heading_match(l.trim()).map(|(lv, _)| lv == 1).unwrap_or(false) {
+                continue;
+            }
+        }
+        let t = l.trim();
+        if (t.starts_with("![") && t.ends_with(')')) || (t.starts_with("![[") && t.ends_with("]]")) {
+            continue; // image-only line
+        }
+        rest.push(l);
+    }
+    let plain = parse(&rest.join("\n")).plain_text;
+    let mut out = String::new();
+    let mut n = 0;
+    for l in plain.lines() {
+        let l = l.split_whitespace().collect::<Vec<_>>().join(" ");
+        if l.is_empty() || l.chars().all(|c| matches!(c, '-' | '|' | ':' | ' ' | '=' | '*' | '_')) {
+            continue;
+        }
+        let l = l.trim_matches('|').trim().to_string();
+        if !out.is_empty() {
+            out.push('\n');
+            n += 1;
+        }
+        out.push_str(&l);
+        n += l.chars().count();
+        if n >= max_chars {
+            break;
+        }
+    }
+    if out.chars().count() > max_chars {
+        let cut: String = out.chars().take(max_chars).collect();
+        out = format!("{}…", cut.trim_end());
+    }
+    out
+}
+
+/// Media id of the first `![alt](media:<id>)` image in the body.
+pub fn first_image(markdown: &str) -> Option<String> {
+    let i = markdown.find("](media:")?;
+    let rest = &markdown[i + 8..];
+    let end = rest.find(')')?;
+    let id = rest[..end].trim();
+    (!id.is_empty()).then(|| id.to_string())
+}
+
 /// Flips the checkbox on 0-based `line` (only if that line is a task). Returns the new body.
 pub fn toggle_task(markdown: &str, line: usize) -> Option<String> {
     let normalized = markdown.replace("\r\n", "\n");
@@ -364,9 +423,18 @@ pub fn toggle_task(markdown: &str, line: usize) -> Option<String> {
 
 /// Title for a body: first `# Heading`, else first non-empty line (syntax stripped), else "Untitled".
 pub fn derive_title(markdown: &str) -> String {
+    derive_title_with(markdown, None)
+}
+
+/// Like [`derive_title`], but `fallback` (front-matter title / file name of imported notes) wins over
+/// "first line of text" when there is no `# Heading`.
+pub fn derive_title_with(markdown: &str, fallback: Option<&str>) -> String {
     let p = parse(markdown);
     if let Some(t) = p.title.filter(|t| !t.is_empty()) {
         return t;
+    }
+    if let Some(f) = fallback.filter(|f| !f.trim().is_empty()) {
+        return f.trim().to_string();
     }
     for l in p.plain_text.lines() {
         let l = l.trim();
@@ -379,6 +447,15 @@ pub fn derive_title(markdown: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn preview_strips_markdown_skips_title_and_image_lines() {
+        let md = "# Title\n\nSome **bold** and a [[Link|alias]] with `code`.\n![pic](media:abc)\n\n- [ ] task one\n> quote\nlast line";
+        let p = preview(md, 200);
+        assert!(!p.contains("Title") && !p.contains("**") && !p.contains("media:") && !p.contains("[["), "{p}");
+        assert!(p.starts_with("Some bold and a"), "{p}");
+        assert!(preview(md, 20).chars().count() <= 21);
+        assert_eq!(first_image(md).as_deref(), Some("abc"));
+    }
     use super::*;
 
     #[test]

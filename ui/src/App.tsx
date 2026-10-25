@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { AudioLines, CalendarClock, Moon, Network, Search, StickyNote, Sun, Command as CmdIcon } from 'lucide-react';
 import { useStore, type View } from './lib/store';
 import { TimelineView } from './views/TimelineView';
@@ -7,6 +7,8 @@ import { GraphView } from './views/GraphView';
 import { SearchView } from './views/SearchView';
 import { LibraryView } from './views/LibraryView';
 import { QuickSwitcher } from './components/QuickSwitcher';
+import { ImportDialog, useImportActions } from './components/ImportDialog';
+import { isTauri } from './lib/api';
 import { cmd } from './lib/api';
 
 const NAV: { id: View; label: string; icon: typeof Search }[] = [
@@ -20,6 +22,24 @@ const NAV: { id: View; label: string; icon: typeof Search }[] = [
 export function App() {
   const { ready, error, view, setView, theme, setTheme, init, toast, setSwitcher, stats, entries, refresh, fail, notify } = useStore();
   useEffect(() => { init(); }, [init]);
+  const importer = useImportActions();
+  const dropPaths = useRef(importer.dropPaths); dropPaths.current = importer.dropPaths;
+  const dropBrowser = useRef(importer.dropBrowser); dropBrowser.current = importer.dropBrowser;
+  useEffect(() => {
+    // Desktop: the webview hands us real file paths (folders included) via Tauri's drag-drop event.
+    if (isTauri()) {
+      let un: (() => void) | undefined; let dead = false;
+      import('@tauri-apps/api/webview').then(({ getCurrentWebview }) => getCurrentWebview().onDragDropEvent((e) => {
+        if (e.payload.type === 'drop') dropPaths.current(e.payload.paths);
+      })).then((f) => { if (dead) f(); else un = f; }).catch(() => undefined);
+      return () => { dead = true; un?.(); };
+    }
+    // Browser: HTML5 drop, descending into dropped folders.
+    const over = (e: DragEvent) => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); };
+    const drop = (e: DragEvent) => { if (!e.dataTransfer?.types.includes('Files')) return; e.preventDefault(); dropBrowser.current(e.dataTransfer); };
+    window.addEventListener('dragover', over); window.addEventListener('drop', drop);
+    return () => { window.removeEventListener('dragover', over); window.removeEventListener('drop', drop); };
+  }, []);
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -65,6 +85,7 @@ export function App() {
       </main>
       {toast && <div className="toast" role="status" data-testid="toast">{toast}</div>}
       <QuickSwitcher />
+      <ImportDialog />
     </div>
   );
 }

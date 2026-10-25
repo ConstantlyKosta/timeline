@@ -12,7 +12,7 @@ struct AppLib(Arc<Library>);
 
 #[tauri::command]
 fn dispatch(lib: State<'_, AppLib>, name: String, args: Option<serde_json::Value>) -> Result<serde_json::Value, String> {
-    timeline_core::dispatch::dispatch(&lib.0, &name, args.unwrap_or_else(|| serde_json::json!({}))).map_err(|e| e.to_string())
+    timeline_core::dispatch::dispatch_shared(&lib.0, &name, args.unwrap_or_else(|| serde_json::json!({}))).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -29,6 +29,24 @@ fn import_media(lib: State<'_, AppLib>, request: tauri::ipc::Request<'_>) -> Res
     let recorded_at = request.headers().get("x-recorded-at").and_then(|v| v.to_str().ok()).and_then(|v| v.parse::<i64>().ok());
     let out = lib.0.import_media(&name, bytes, recorded_at).map_err(|e| e.to_string())?;
     serde_json::to_value(out).map_err(|e| e.to_string())
+}
+
+/// Imports media files straight from disk paths (native file dialog / drag-and-drop), so large
+/// recordings never travel through the webview. Returns one entry per file.
+#[tauri::command]
+fn import_media_paths(lib: State<'_, AppLib>, paths: Vec<String>) -> Vec<serde_json::Value> {
+    paths
+        .into_iter()
+        .map(|p| {
+            let path = std::path::Path::new(&p);
+            let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| p.clone());
+            let recorded = std::fs::metadata(path).ok().and_then(|m| m.created().or_else(|_| m.modified()).ok()).and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_millis() as i64);
+            match std::fs::read(path).map_err(|e| e.to_string()).and_then(|bytes| lib.0.import_media(&name, &bytes, recorded).map_err(|e| e.to_string())) {
+                Ok(o) => serde_json::json!({ "name": name, "ok": serde_json::to_value(o).unwrap_or_default() }),
+                Err(e) => serde_json::json!({ "name": name, "error": e }),
+            }
+        })
+        .collect()
 }
 
 /// Writes text the user chose a destination for (native save dialog runs in the UI).
@@ -108,7 +126,7 @@ pub fn run() {
             let state = ctx.app_handle().state::<AppLib>();
             media_response(&state.0, &req)
         })
-        .invoke_handler(tauri::generate_handler![dispatch, import_media, save_text])
+        .invoke_handler(tauri::generate_handler![dispatch, import_media, import_media_paths, save_text])
         .run(tauri::generate_context!())
         .expect("error while running Timeline");
 }

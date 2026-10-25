@@ -90,6 +90,60 @@ pub struct Note {
     pub date: Ms,
     pub created_at: Ms,
     pub updated_at: Ms,
+    /// Folder the note was imported from ("" for notes created in the app), `/`-separated.
+    #[serde(default)]
+    pub folder: String,
+    /// Original file path for imported notes (used to skip re-imports).
+    #[serde(default)]
+    pub source_path: Option<String>,
+    /// SHA-256 of the imported file's bytes (used to skip duplicates).
+    #[serde(default)]
+    pub content_hash: Option<String>,
+    /// File name without extension for imported notes; also resolves `[[wiki links]]`.
+    #[serde(default)]
+    pub slug: Option<String>,
+    /// YAML front matter of imported notes as a JSON object (title, tags, aliases, custom keys...).
+    #[serde(default)]
+    pub properties: serde_json::Map<String, serde_json::Value>,
+}
+
+impl Note {
+    /// A note with only the essentials set (everything imported-related empty).
+    pub fn basic(id: &str, title: &str, body: &str, date: Ms, now: Ms) -> Note {
+        Note { id: id.into(), title: title.into(), body: body.into(), date, created_at: now, updated_at: now, folder: String::new(), source_path: None, content_hash: None, slug: None, properties: Default::default() }
+    }
+    /// Lowercased tags from front matter (`tags: [a, b]`), without the leading `#`.
+    pub fn front_matter_tags(&self) -> Vec<String> {
+        let mut out = Vec::new();
+        for key in ["tags", "tag"] {
+            match self.properties.get(key) {
+                Some(serde_json::Value::Array(a)) => out.extend(a.iter().filter_map(|v| v.as_str().map(String::from))),
+                Some(serde_json::Value::String(s)) => out.extend(s.split([',', ' ']).map(String::from)),
+                _ => {}
+            }
+        }
+        let mut seen = std::collections::HashSet::new();
+        out.into_iter().map(|t| t.trim().trim_start_matches('#').to_lowercase()).filter(|t| !t.is_empty() && seen.insert(t.clone())).collect()
+    }
+    /// Names other notes can link to this one by (title, file name, aliases), unnormalised.
+    pub fn link_names(&self) -> Vec<String> {
+        let mut v = vec![self.title.clone()];
+        if let Some(s) = &self.slug {
+            v.push(s.clone());
+        }
+        for key in ["aliases", "alias"] {
+            match self.properties.get(key) {
+                Some(serde_json::Value::Array(a)) => v.extend(a.iter().filter_map(|x| x.as_str().map(String::from))),
+                Some(serde_json::Value::String(s)) => v.push(s.clone()),
+                _ => {}
+            }
+        }
+        v
+    }
+    /// Title fallback used when the body has no `# Heading`.
+    pub fn title_fallback(&self) -> Option<String> {
+        self.properties.get("title").and_then(|v| v.as_str()).map(String::from).or_else(|| self.slug.clone())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -113,6 +167,14 @@ pub struct TimelineEntry {
     pub title: String,
     pub snippet: String,
     pub tags: Vec<String>,
+    /// Markdown-stripped preview text (first meaningful lines, newline-separated, up to ~420 chars).
+    #[serde(default)]
+    pub preview: String,
+    /// Media id of the first image in a note (for thumbnails).
+    #[serde(default)]
+    pub image: Option<String>,
+    #[serde(default)]
+    pub folder: String,
 }
 
 impl TimelineEntry {

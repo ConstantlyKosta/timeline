@@ -598,7 +598,7 @@ dependencies = [
 
 [[package]]
 name = "dev-bridge"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "percent-encoding",
  "serde_json",
@@ -3694,7 +3694,7 @@ dependencies = [
 
 [[package]]
 name = "timeline-app"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "percent-encoding",
  "serde_json",
@@ -3707,7 +3707,7 @@ dependencies = [
 
 [[package]]
 name = "timeline-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "hound",
@@ -3722,6 +3722,7 @@ dependencies = [
  "thiserror 1.0.69",
  "unicode-normalization",
  "uuid",
+ "walkdir",
 ]
 
 [[package]]

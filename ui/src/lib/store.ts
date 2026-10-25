@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { cmd } from './api';
-import type { MediaItem, NoteSummary, NoteRef, Stats, TagCount, TimelineEntry } from './types';
+import { emptySummary, type Cancel, type Progress } from './importer';
+import type { ImportSummary, MediaItem, NoteSummary, NoteRef, Stats, TagCount, TimelineEntry } from './types';
 
 export type View = 'timeline' | 'notes' | 'graph' | 'search' | 'library';
 export type Theme = 'light' | 'dark';
@@ -25,7 +26,12 @@ interface State {
   switcherOpen: boolean;
   searchQuery: string;
   toast: string | null;
+  /** State of the Markdown import (progress + summary dialog). */
+  importing: { running: boolean; fraction: number; message: string; summary: ImportSummary | null; error: string | null; cancel: Cancel | null } | null;
   // actions
+  runImport(job: (onProgress: (p: Progress) => void, cancel: Cancel) => Promise<ImportSummary>): Promise<void>;
+  cancelImport(): void;
+  closeImport(): void;
   init(): Promise<void>;
   refresh(): Promise<void>;
   setView(v: View): void;
@@ -54,7 +60,7 @@ let toastTimer: ReturnType<typeof setTimeout> | undefined;
 export const useStore = create<State>((set, get) => ({
   ready: false, error: null, view: 'timeline', theme: savedTheme(),
   entries: [], notes: [], titles: [], tags: [], media: [], stats: null,
-  selectedNoteId: null, selectedMediaId: null, seekTo: null, tl: null, switcherOpen: false, searchQuery: '', toast: null,
+  selectedNoteId: null, selectedMediaId: null, seekTo: null, tl: null, switcherOpen: false, searchQuery: '', toast: null, importing: null,
 
   async init() {
     try {
@@ -71,6 +77,21 @@ export const useStore = create<State>((set, get) => ({
       set({ entries, notes, titles, tags, media, stats });
     } catch (e) { get().fail(e); }
   },
+  async runImport(job) {
+    if (get().importing?.running) { get().notify('An import is already running'); return; }
+    const cancel: Cancel = { cancelled: false };
+    set({ importing: { running: true, fraction: 0, message: 'Starting…', summary: null, error: null, cancel } });
+    try {
+      const summary = await job((p) => set((st) => ({ importing: st.importing && { ...st.importing, fraction: p.fraction, message: p.message } })), cancel);
+      await get().refresh();
+      set({ importing: { running: false, fraction: 1, message: 'Done', summary: { ...emptySummary(), ...summary }, error: null, cancel: null } });
+    } catch (e) {
+      await get().refresh();
+      set({ importing: { running: false, fraction: 0, message: '', summary: null, error: e instanceof Error ? e.message : String(e), cancel: null } });
+    }
+  },
+  cancelImport() { const c = get().importing?.cancel; if (c) c.cancelled = true; set((st) => ({ importing: st.importing && { ...st.importing, message: 'Cancelling…' } })); },
+  closeImport: () => set({ importing: null }),
   setView: (view) => set({ view }),
   setTheme(theme) {
     try { localStorage.setItem('theme', theme); } catch { /* ignore */ }

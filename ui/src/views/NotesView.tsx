@@ -4,6 +4,8 @@ import { ArrowLeft, Bold, CalendarDays, Code, Download, FileText, Heading1, Imag
 import { cmd, importBrowserFile } from '../lib/api';
 import { useStore } from '../lib/store';
 import type { Note, NoteContext } from '../lib/types';
+import { VirtualList } from '../components/VirtualList';
+import { ImportButtons, useImportActions } from '../components/ImportDialog';
 import { Editor, type EditorHandle } from '../editor/Editor';
 import { insertCodeBlock, insertTable, linePrefix, wrap } from '../editor/commands';
 
@@ -11,6 +13,7 @@ const toLocalInput = (ms: number) => format(new Date(ms), "yyyy-MM-dd'T'HH:mm");
 
 export function NotesView() {
   const { notes, tags, selectedNoteId, openNote, newNote, openByTitle, refresh, fail, notify, setView, setSearchQuery } = useStore();
+  const importer = useImportActions();
   const [filter, setFilter] = useState('');
   const [tagFilter, setTagFilter] = useState<string | null>(null);
 
@@ -39,18 +42,17 @@ export function NotesView() {
             ))}
           </div>
         )}
-        <ul>
-          {shown.map((n) => (
-            <li key={n.id}>
+        {shown.length > 0 ? (
+          <VirtualList items={shown} rowHeight={84} keyOf={(n) => n.id} className="note-vlist" testId="note-list"
+            render={(n) => (
               <button className={`note-item ${n.id === selectedNoteId ? 'on' : ''}`} onClick={() => openNote(n.id)} data-testid="note-item">
                 <b>{n.title || 'Untitled'}</b>
-                <small>{format(new Date(n.date), 'd MMM yyyy')}{n.taskCount > 0 && ` · ☑ ${n.doneCount}/${n.taskCount}`}</small>
+                <small>{format(new Date(n.date), 'd MMM yyyy')}{n.folder ? ` · ${n.folder}` : ''}{n.taskCount > 0 && ` · ☑ ${n.doneCount}/${n.taskCount}`}</small>
                 <span>{n.snippet}</span>
               </button>
-            </li>
-          ))}
-          {!shown.length && <li className="empty-small">No notes match.</li>}
-        </ul>
+            )} />
+        ) : <ul><li className="empty-small">No notes match.</li></ul>}
+        <ImportButtons actions={importer} />
         <button className="ghost export" onClick={() => cmd.exportMarkdown().then((r) => notify(`Exported ${r.count} notes to ${r.dir}`)).catch(fail)}><Download size={14} /> Export all as .md</button>
       </aside>
       {selectedNoteId ? (

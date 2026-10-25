@@ -30,7 +30,7 @@ export function LibraryView() {
   return (
     <div className={`library ${drag ? 'drag' : ''}`} data-has-item={!!selected} data-testid="library-view"
       onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
-      onDrop={(e) => { e.preventDefault(); setDrag(false); if (e.dataTransfer.files.length) importFiles(e.dataTransfer.files); }}>
+      onDrop={() => setDrag(false)}>
       <aside className="note-list">
         <div className="note-list-head">
           <button className="primary wide" onClick={() => input.current?.click()} data-testid="import-media"><Upload size={15} /> Import audio / video / photos</button>

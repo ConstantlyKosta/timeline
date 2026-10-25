@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Timeline",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "app.timeline.local",
   "build": {
     "frontendDist": "../ui/dist",
@@ -20,7 +20,7 @@
         "minWidth": 360,
         "minHeight": 480,
         "resizable": true,
-        "dragDropEnabled": false
+        "dragDropEnabled": true
       }
     ],
     "security": {

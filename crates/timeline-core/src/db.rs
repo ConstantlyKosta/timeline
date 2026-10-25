@@ -45,6 +45,26 @@ fn migrations() -> Migrations<'static> {
             updated_at INTEGER NOT NULL
          );
          CREATE INDEX note_date ON note(date);",
+    ),
+    M::up(
+        "ALTER TABLE note ADD COLUMN folder TEXT NOT NULL DEFAULT '';
+         ALTER TABLE note ADD COLUMN source_path TEXT;
+         ALTER TABLE note ADD COLUMN content_hash TEXT;
+         ALTER TABLE note ADD COLUMN slug TEXT;
+         ALTER TABLE note ADD COLUMN properties TEXT NOT NULL DEFAULT '{}';
+         CREATE INDEX note_hash ON note(content_hash);
+         CREATE INDEX note_source ON note(source_path);
+         ALTER TABLE media_item ADD COLUMN attachment INTEGER NOT NULL DEFAULT 0;
+         CREATE TABLE graph_view (
+            name TEXT PRIMARY KEY,
+            json TEXT NOT NULL,
+            updated_at INTEGER NOT NULL
+         );
+         CREATE TABLE node_position (
+            node_id TEXT PRIMARY KEY,
+            x REAL NOT NULL,
+            y REAL NOT NULL
+         );",
     )])
 }
 
@@ -174,13 +194,27 @@ pub fn delete_transcript(c: &Connection, media_id: &str) -> Result<()> {
 
 // ------------------------------------------------------------------- notes
 
+const NOTE_COLS: &str = "id,title,body,date,created_at,updated_at,folder,source_path,content_hash,slug,properties";
 fn note_from_row(r: &Row) -> rusqlite::Result<Note> {
-    Ok(Note { id: r.get(0)?, title: r.get(1)?, body: r.get(2)?, date: r.get(3)?, created_at: r.get(4)?, updated_at: r.get(5)? })
+    let props: String = r.get(10)?;
+    Ok(Note {
+        id: r.get(0)?,
+        title: r.get(1)?,
+        body: r.get(2)?,
+        date: r.get(3)?,
+        created_at: r.get(4)?,
+        updated_at: r.get(5)?,
+        folder: r.get(6)?,
+        source_path: r.get(7)?,
+        content_hash: r.get(8)?,
+        slug: r.get(9)?,
+        properties: serde_json::from_str(&props).unwrap_or_default(),
+    })
 }
 pub fn insert_note(c: &Connection, n: &Note) -> Result<()> {
     c.execute(
-        "INSERT INTO note(id,title,body,date,created_at,updated_at) VALUES(?1,?2,?3,?4,?5,?6)",
-        params![n.id, n.title, n.body, n.date, n.created_at, n.updated_at],
+        "INSERT INTO note(id,title,body,date,created_at,updated_at,folder,source_path,content_hash,slug,properties) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)",
+        params![n.id, n.title, n.body, n.date, n.created_at, n.updated_at, n.folder, n.source_path, n.content_hash, n.slug, serde_json::to_string(&n.properties)?],
     )?;
     Ok(())
 }
@@ -188,12 +222,34 @@ pub fn update_note(c: &Connection, n: &Note) -> Result<usize> {
     Ok(c.execute("UPDATE note SET title=?2, body=?3, date=?4, updated_at=?5 WHERE id=?1", params![n.id, n.title, n.body, n.date, n.updated_at])?)
 }
 pub fn get_note(c: &Connection, id: &str) -> Result<Option<Note>> {
-    Ok(c.query_row("SELECT id,title,body,date,created_at,updated_at FROM note WHERE id=?1", [id], note_from_row).optional()?)
+    Ok(c.query_row(&format!("SELECT {NOTE_COLS} FROM note WHERE id=?1"), [id], note_from_row).optional()?)
 }
 pub fn list_notes(c: &Connection) -> Result<Vec<Note>> {
-    let mut st = c.prepare("SELECT id,title,body,date,created_at,updated_at FROM note ORDER BY date, id")?;
+    let mut st = c.prepare(&format!("SELECT {NOTE_COLS} FROM note ORDER BY date, id"))?;
     let rows = st.query_map([], note_from_row)?.collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(rows)
+}
+/// (content_hash set, source_path set) of all imported notes, for duplicate detection.
+pub fn imported_keys(c: &Connection) -> Result<(std::collections::HashSet<String>, std::collections::HashSet<String>)> {
+    let mut hashes = std::collections::HashSet::new();
+    let mut paths = std::collections::HashSet::new();
+    let mut st = c.prepare("SELECT content_hash, source_path FROM note WHERE content_hash IS NOT NULL OR source_path IS NOT NULL")?;
+    let rows = st.query_map([], |r| Ok((r.get::<_, Option<String>>(0)?, r.get::<_, Option<String>>(1)?)))?;
+    for r in rows {
+        let (h, p) = r?;
+        hashes.extend(h);
+        paths.extend(p);
+    }
+    Ok((hashes, paths))
+}
+pub fn set_media_attachment(c: &Connection, id: &str, attachment: bool) -> Result<()> {
+    c.execute("UPDATE media_item SET attachment=?2 WHERE id=?1", params![id, attachment])?;
+    Ok(())
+}
+pub fn attachment_ids(c: &Connection) -> Result<std::collections::HashSet<String>> {
+    let mut st = c.prepare("SELECT id FROM media_item WHERE attachment=1")?;
+    let v = st.query_map([], |r| r.get::<_, String>(0))?.collect::<rusqlite::Result<_>>()?;
+    Ok(v)
 }
 pub fn delete_note(c: &Connection, id: &str) -> Result<usize> {
     Ok(c.execute("DELETE FROM note WHERE id=?1", [id])?)
@@ -240,7 +296,7 @@ mod tests {
     #[test]
     fn notes_roundtrip_and_meta() {
         let c = open_in_memory().unwrap();
-        let n = Note { id: "n".into(), title: "T".into(), body: "b".into(), date: 1, created_at: 1, updated_at: 1 };
+        let n = Note::basic("n", "T", "b", 1, 1);
         insert_note(&c, &n).unwrap();
         let mut n2 = n.clone();
         n2.body = "changed".into();

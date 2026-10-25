@@ -8,7 +8,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tiny_http::{Header, Method, Request, Response, ResponseBox, Server, StatusCode};
-use timeline_core::dispatch::dispatch;
+use timeline_core::dispatch::dispatch_shared;
 use timeline_core::Library;
 
 pub struct Config {
@@ -111,7 +111,7 @@ fn static_response(dir: &Path, url_path: &str) -> ResponseBox {
     }
 }
 
-fn handle(lib: &Library, cfg: &Config, req: &mut Request) -> ResponseBox {
+fn handle(lib: &Arc<Library>, cfg: &Config, req: &mut Request) -> ResponseBox {
     let url = req.url().to_string();
     let (path, query) = url.split_once('?').unwrap_or((url.as_str(), ""));
     if *req.method() == Method::Options {
@@ -131,7 +131,7 @@ fn handle(lib: &Library, cfg: &Config, req: &mut Request) -> ResponseBox {
                 Err(e) => return error_response(400, &format!("bad JSON: {e}")),
             }
         };
-        return match dispatch(lib, cmd, args) {
+        return match dispatch_shared(lib, cmd, args) {
             Ok(v) => json_response(200, v.to_string()),
             Err(e) => error_response(400, &e.to_string()),
         };

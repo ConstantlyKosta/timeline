@@ -55,8 +55,28 @@ pub struct Backlink {
 
 /// Resolve a wiki-link target to a note id (case/diacritic-insensitive title match).
 pub fn resolve_target(notes: &[Note], target: &str) -> Option<String> {
-    let key = normalize_title(target);
-    notes.iter().find(|n| normalize_title(&n.title) == key).map(|n| n.id.clone())
+    let key = target_key(target);
+    notes.iter().find(|n| n.link_names().iter().any(|x| target_key(x) == key)).map(|n| n.id.clone())
+}
+
+/// Normalised lookup key for a link target or note name: case/diacritics folded, `.md` suffix and
+/// folder prefix (`[[Projects/Atlas]]`) dropped.
+pub fn target_key(t: &str) -> String {
+    let t = t.trim();
+    let last = t.rsplit('/').next().unwrap_or(t);
+    let last = last.strip_suffix(".md").unwrap_or(last);
+    normalize_title(last)
+}
+
+/// Map from every name a note answers to (title, file name, aliases) to its id. First note wins.
+pub fn name_index(notes: &[&Note]) -> HashMap<String, String> {
+    let mut m = HashMap::new();
+    for n in notes {
+        for name in n.link_names() {
+            m.entry(target_key(&name)).or_insert_with(|| n.id.clone());
+        }
+    }
+    m
 }
 
 /// Build the graph: one node per note, ghost nodes for unresolved links, link edges, and tag
@@ -66,8 +86,8 @@ pub fn build(notes: &[Note], parsed: &HashMap<String, ParsedNote>) -> Graph {
     let mut by_title: HashMap<String, String> = HashMap::new();
     let mut ordered: Vec<&Note> = notes.iter().collect();
     ordered.sort_by(|a, b| a.id.cmp(&b.id));
+    by_title.extend(name_index(&ordered));
     for n in &ordered {
-        by_title.entry(normalize_title(&n.title)).or_insert_with(|| n.id.clone());
         let tags = parsed.get(&n.id).map(|p| p.tags.clone()).unwrap_or_default();
         nodes.insert(n.id.clone(), GraphNode { id: n.id.clone(), title: n.title.clone(), is_ghost: false, tags, degree: 0, x: 0.0, y: 0.0 });
     }
@@ -76,7 +96,7 @@ pub fn build(notes: &[Note], parsed: &HashMap<String, ParsedNote>) -> Graph {
     for n in &ordered {
         let Some(p) = parsed.get(&n.id) else { continue };
         for target in p.unique_link_targets() {
-            let key = normalize_title(&target);
+            let key = target_key(&target);
             let to = match by_title.get(&key) {
                 Some(id) => id.clone(),
                 None => {
@@ -195,7 +215,7 @@ mod tests {
     use crate::markdown;
 
     fn note(id: &str, title: &str, body: &str) -> Note {
-        Note { id: id.into(), title: title.into(), body: body.into(), date: 0, created_at: 0, updated_at: 0 }
+        Note::basic(id, title, body, 0, 0)
     }
     fn build_from(notes: &[Note]) -> Graph {
         let parsed = notes.iter().map(|n| (n.id.clone(), markdown::parse(&n.body))).collect();

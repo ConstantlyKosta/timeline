@@ -9,6 +9,7 @@ use crate::sample;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::{json, Value};
+use std::sync::Arc;
 
 fn args<T: DeserializeOwned>(v: Value) -> Result<T> {
     serde_json::from_value(v).map_err(|e| Error::InvalidArgument(e.to_string()))
@@ -93,8 +94,60 @@ pub fn bootstrap(lib: &Library, tz_min: i32) -> Result<Value> {
     Ok(json!({ "seeded": seeded, "stats": lib.stats()? }))
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ImportStart {
+    paths: Vec<String>,
+    #[serde(default)]
+    tz_offset_minutes: i32,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ImportInline {
+    files: Vec<crate::import::InlineFile>,
+    #[serde(default)]
+    vaults: Vec<String>,
+    #[serde(default)]
+    tz_offset_minutes: i32,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JobId {
+    job_id: String,
+}
+
+/// Like [`dispatch`], plus the commands that start background jobs (they need a shared library
+/// handle to move into the worker thread): `import_start`, `job_status`, `job_cancel`, `job_list`.
+pub fn dispatch_shared(lib: &Arc<Library>, name: &str, a: Value) -> Result<Value> {
+    match name {
+        "import_start" => {
+            let r: ImportStart = args(a)?;
+            if r.paths.is_empty() {
+                return Err(Error::InvalidArgument("no files or folders given".into()));
+            }
+            let l = lib.clone();
+            let id = lib.jobs().spawn("import", None, move |ctx| {
+                let s = crate::import::import_paths(&l, &r.paths, r.tz_offset_minutes, &ctx)?;
+                Ok(serde_json::to_value(s)?)
+            });
+            Ok(json!({ "jobId": id }))
+        }
+        "job_status" => {
+            let id = args::<JobId>(a)?.job_id;
+            lib.jobs().status(&id).map(|s| serde_json::to_value(s).map_err(Error::from)).unwrap_or_else(|| Err(Error::NotFound(format!("job {id}"))))
+        }
+        "job_cancel" => Ok(json!(lib.jobs().cancel(&args::<JobId>(a)?.job_id))),
+        "job_list" => out(lib.jobs().list()),
+        _ => dispatch(lib, name, a),
+    }
+}
+
 pub fn dispatch(lib: &Library, name: &str, a: Value) -> Result<Value> {
     match name {
+        "import_inline" => {
+            let r: ImportInline = args(a)?;
+            out(crate::import::import_inline(lib, &r.files, &r.vaults, r.tz_offset_minutes)?)
+        }
         "bootstrap" => bootstrap(lib, args::<Tz>(a)?.tz_offset_minutes),
         "load_sample_data" => {
             sample::seed(lib, system_now_ms(), args::<Tz>(a)?.tz_offset_minutes)?;

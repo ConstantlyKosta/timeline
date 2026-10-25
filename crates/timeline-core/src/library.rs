@@ -25,6 +25,7 @@ pub struct NoteSummary {
     pub updated_at: Ms,
     pub snippet: String,
     pub tags: Vec<String>,
+    pub folder: String,
     pub task_count: usize,
     pub done_count: usize,
 }
@@ -101,6 +102,7 @@ pub struct Library {
     data_dir: PathBuf,
     inner: Mutex<Inner>,
     clock: Box<dyn Fn() -> Ms + Send + Sync>,
+    jobs: crate::jobs::Jobs,
 }
 
 pub fn system_now_ms() -> Ms {
@@ -121,9 +123,47 @@ impl Library {
         let data_dir = data_dir.as_ref().to_path_buf();
         std::fs::create_dir_all(data_dir.join("media"))?;
         let conn = db::open(&data_dir.join("timeline.db"))?;
-        let lib = Library { data_dir, inner: Mutex::new(Inner { conn, search: SearchEngine::new(), parsed: HashMap::new() }), clock };
+        let lib = Library { data_dir, inner: Mutex::new(Inner { conn, search: SearchEngine::new(), parsed: HashMap::new() }), clock, jobs: Default::default() };
         lib.rebuild_index()?;
         Ok(lib)
+    }
+
+    pub fn jobs(&self) -> &crate::jobs::Jobs {
+        &self.jobs
+    }
+
+    /// Inserts many notes in one transaction and indexes them (used by the Markdown importer).
+    pub(crate) fn insert_notes_bulk(&self, notes: &[Note]) -> Result<()> {
+        let mut g = self.lock();
+        {
+            let tx = g.conn.transaction()?;
+            for n in notes {
+                db::insert_note(&tx, n)?;
+            }
+            tx.commit()?;
+        }
+        for n in notes {
+            Self::index_note(&mut g, n);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn notes_all(&self) -> Result<Vec<Note>> {
+        db::list_notes(&self.lock().conn)
+    }
+
+    pub(crate) fn imported_keys(&self) -> Result<(std::collections::HashSet<String>, std::collections::HashSet<String>)> {
+        db::imported_keys(&self.lock().conn)
+    }
+
+    /// Stores an image that an imported note refers to. It is hidden from the media lists/timeline
+    /// (it lives inside the note) unless the same file already existed as ordinary media.
+    pub(crate) fn import_attachment(&self, file_name: &str, bytes: &[u8], recorded_at: Ms) -> Result<String> {
+        let out = self.import_media_inner(file_name, bytes, Some(recorded_at), None, None)?;
+        if !out.duplicate {
+            db::set_media_attachment(&self.lock().conn, &out.item.id, true)?;
+        }
+        Ok(out.item.id)
     }
 
     pub fn data_dir(&self) -> &Path {
@@ -152,7 +192,12 @@ impl Library {
     }
 
     fn index_note(g: &mut Inner, n: &Note) {
-        let p = markdown::parse(&n.body);
+        let mut p = markdown::parse(&n.body);
+        for t in n.front_matter_tags() {
+            if !p.tags.contains(&t) {
+                p.tags.push(t);
+            }
+        }
         g.search.upsert(SearchDocument { id: n.id.clone(), kind: SearchDocKind::Note, owner_id: n.id.clone(), title: n.title.clone(), text: p.plain_text.clone(), date: n.date, time: None });
         g.parsed.insert(n.id.clone(), p);
     }
@@ -183,9 +228,24 @@ impl Library {
         let mut out = Vec::new();
         for n in db::list_notes(&g.conn)? {
             let tags = g.parsed.get(&n.id).map(|p| p.tags.clone()).unwrap_or_default();
-            out.push(TimelineEntry { id: n.id.clone(), kind: EntryKind::Note, start: n.date, duration: 0.0, title: n.title.clone(), snippet: markdown::snippet(&n.body, 140), tags });
+            out.push(TimelineEntry {
+                id: n.id.clone(),
+                kind: EntryKind::Note,
+                start: n.date,
+                duration: 0.0,
+                title: n.title.clone(),
+                snippet: markdown::snippet(&n.body, 140),
+                tags,
+                preview: markdown::preview(&n.body, 420),
+                image: markdown::first_image(&n.body),
+                folder: n.folder.clone(),
+            });
         }
+        let hidden = db::attachment_ids(&g.conn)?;
         for r in db::list_media(&g.conn)? {
+            if hidden.contains(&r.item.id) {
+                continue;
+            }
             let m = r.item;
             let (kind, duration) = match m.kind {
                 MediaKind::Audio => (EntryKind::Recording, m.duration.unwrap_or(0.0)),
@@ -196,7 +256,8 @@ impl Library {
                 Some(t) => t.segments.iter().take(2).map(|s| s.text.as_str()).collect::<Vec<_>>().join(" "),
                 None => String::new(),
             };
-            out.push(TimelineEntry { id: m.id, kind, start: m.recorded_at, duration, title: m.title, snippet, tags: vec![] });
+            let image = (m.kind == MediaKind::Photo).then(|| m.id.clone());
+            out.push(TimelineEntry { id: m.id, kind, start: m.recorded_at, duration, title: m.title, snippet: snippet.clone(), tags: vec![], preview: snippet, image, folder: String::new() });
         }
         out.sort_by(|a, b| a.start.cmp(&b.start).then_with(|| a.id.cmp(&b.id)));
         Ok(out)
@@ -215,6 +276,7 @@ impl Library {
                 NoteSummary {
                     snippet: markdown::snippet(&n.body, 140),
                     tags: p.map(|p| p.tags.clone()).unwrap_or_default(),
+                    folder: n.folder.clone(),
                     task_count: p.map(|p| p.tasks.len()).unwrap_or(0),
                     done_count: p.map(|p| p.tasks.iter().filter(|t| t.is_done).count()).unwrap_or(0),
                     id: n.id,
@@ -258,7 +320,7 @@ impl Library {
 
     pub(crate) fn create_note_with_id(&self, id: &str, body: &str, date: Option<Ms>) -> Result<Note> {
         let now = self.now();
-        let n = Note { id: id.to_string(), title: markdown::derive_title(body), body: body.to_string(), date: date.unwrap_or(now), created_at: now, updated_at: now };
+        let n = Note::basic(id, &markdown::derive_title(body), body, date.unwrap_or(now), now);
         let mut g = self.lock();
         db::insert_note(&g.conn, &n)?;
         Self::index_note(&mut g, &n);
@@ -271,7 +333,7 @@ impl Library {
         let mut n = db::get_note(&g.conn, id)?.ok_or_else(|| Error::NotFound(format!("note {id}")))?;
         if let Some(b) = body {
             n.body = b.to_string();
-            n.title = markdown::derive_title(b);
+            n.title = markdown::derive_title_with(b, n.title_fallback().as_deref());
         }
         if let Some(d) = date {
             n.date = d;
@@ -306,8 +368,8 @@ impl Library {
         }
         {
             let g = self.lock();
-            let key = normalize_title(title);
-            if let Some(n) = db::list_notes(&g.conn)?.into_iter().find(|n| normalize_title(&n.title) == key) {
+            let key = graph::target_key(title);
+            if let Some(n) = db::list_notes(&g.conn)?.into_iter().find(|n| n.link_names().iter().any(|x| graph::target_key(x) == key)) {
                 return Ok(n);
             }
         }
@@ -319,14 +381,14 @@ impl Library {
         let note = db::get_note(&g.conn, id)?.ok_or_else(|| Error::NotFound(format!("note {id}")))?;
         let all = db::list_notes(&g.conn)?;
         let p = g.parsed.get(id).cloned().unwrap_or_else(|| markdown::parse(&note.body));
-        let my_key = normalize_title(&note.title);
+        let my_keys: std::collections::HashSet<String> = note.link_names().iter().map(|x| graph::target_key(x)).collect();
         let mut backlinks = Vec::new();
         for other in &all {
             if other.id == id {
                 continue;
             }
             let Some(op) = g.parsed.get(&other.id) else { continue };
-            if let Some(l) = op.links.iter().find(|l| normalize_title(&l.target) == my_key) {
+            if let Some(l) = op.links.iter().find(|l| my_keys.contains(&graph::target_key(&l.target))) {
                 let line_text = other.body.lines().nth(l.line).unwrap_or("");
                 backlinks.push(Backlink { note_id: other.id.clone(), title: other.title.clone(), snippet: markdown::snippet(line_text, 140), line: l.line });
             }
@@ -416,8 +478,10 @@ impl Library {
 
     pub fn list_media(&self) -> Result<Vec<MediaItem>> {
         let g = self.lock();
+        let hidden = db::attachment_ids(&g.conn)?;
         Ok(db::list_media(&g.conn)?
             .into_iter()
+            .filter(|r| !hidden.contains(&r.item.id))
             .map(|r| {
                 let mut i = r.item;
                 i.is_missing = !self.media_path_for(&i.sha256, &r.ext).exists();
@@ -530,7 +594,9 @@ impl Library {
                 i += 1;
             }
             let date = chrono::DateTime::from_timestamp_millis(n.date).map(|d| d.format("%Y-%m-%dT%H:%M:%SZ").to_string()).unwrap_or_default();
-            let content = format!("---\ndate: {date}\n---\n\n{}\n", n.body.trim_end());
+            let mut props = n.properties.clone();
+            props.insert("date".into(), serde_json::Value::String(date));
+            let content = format!("{}{}\n", crate::import::front_matter_text(&props), n.body.trim_end());
             std::fs::write(dir.join(format!("{name}.md")), content)?;
         }
         Ok(ExportResult { dir: dir.to_string_lossy().into_owned(), count: notes.len() })
@@ -538,7 +604,8 @@ impl Library {
 
     pub fn stats(&self) -> Result<Stats> {
         let g = self.lock();
-        let media = db::list_media(&g.conn)?;
+        let hidden = db::attachment_ids(&g.conn)?;
+        let media: Vec<_> = db::list_media(&g.conn)?.into_iter().filter(|m| !hidden.contains(&m.item.id)).collect();
         let count = |k: MediaKind| media.iter().filter(|m| m.item.kind == k).count();
         Ok(Stats {
             notes: db::list_notes(&g.conn)?.len(),

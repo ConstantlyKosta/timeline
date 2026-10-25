@@ -1,5 +1,5 @@
 // One command surface, two transports: Tauri IPC (desktop/mobile app) and HTTP (dev bridge for the browser / Playwright).
-import type { ExportResult, Graph, ImportOutcome, MediaItem, Note, NoteContext, NoteRef, NoteSummary, SearchHit, Stats, TagCount, TimelineEntry, Transcript } from './types';
+import type { ExportResult, ImportSummary, JobInfo, Graph, ImportOutcome, MediaItem, Note, NoteContext, NoteRef, NoteSummary, SearchHit, Stats, TagCount, TimelineEntry, Transcript } from './types';
 
 export interface Api {
   /** Raw command dispatch (name + camelCase JSON args). */
@@ -59,6 +59,7 @@ class TauriApi implements Api {
 }
 
 function pickBase(): string {
+  if (typeof location === 'undefined') return '';
   const q = new URLSearchParams(location.search).get('bridge');
   if (q) return q;
   return location.port === '5173' ? 'http://127.0.0.1:8787' : '';
@@ -92,6 +93,11 @@ export const cmd = {
   getTranscript: (mediaId: string) => api.call<Transcript | null>('get_transcript', { mediaId }),
   removeTranscript: (mediaId: string) => api.call<null>('remove_transcript', { mediaId }),
   exportTranscript: (mediaId: string) => api.call<string>('export_transcript', { mediaId }),
+  importStart: (paths: string[]) => api.call<{ jobId: string }>('import_start', { paths, tzOffsetMinutes: -new Date().getTimezoneOffset() }),
+  importInline: (files: { path: string; text: string; modifiedMs?: number }[], vaults: string[] = []) =>
+    api.call<ImportSummary>('import_inline', { files, vaults, tzOffsetMinutes: -new Date().getTimezoneOffset() }),
+  jobStatus: (jobId: string) => api.call<JobInfo>('job_status', { jobId }),
+  jobCancel: (jobId: string) => api.call<boolean>('job_cancel', { jobId }),
   exportMarkdown: () => api.call<ExportResult>('export_markdown'),
 };
 
