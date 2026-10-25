@@ -77,6 +77,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: echo "LIBCLANG_PATH=C:\\Program Files\\LLVM\\bin" >> "$GITHUB_ENV"
+      - name: macOS deployment target (whisper.cpp needs std::filesystem, macOS 10.15+)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> "$GITHUB_ENV"
       - name: Build bundles
         shell: bash
         run: npx --yes @tauri-apps/cli@2 build ${{ matrix.args }}
