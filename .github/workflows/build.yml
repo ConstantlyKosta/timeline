@@ -1,0 +1,64 @@
+# Cross-platform build. NOT RUN by the author (no GitHub runner access); see README "Unverified".
+name: build
+on:
+  push: { branches: [main] }
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: ui/package-lock.json }
+      - name: Linux system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libsoup-3.0-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev patchelf
+      - run: npm --prefix ui ci
+      - run: npm --prefix ui run build
+      - run: cargo test --workspace
+      - run: npm --prefix ui test
+      - run: npx --prefix ui playwright install chrome --with-deps || true
+      - run: npm --prefix ui run e2e
+
+  package:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest, args: "--target aarch64-apple-darwin" }
+          - { os: macos-13,     args: "--target x86_64-apple-darwin" }
+          - { os: windows-latest, args: "" }
+          - { os: ubuntu-22.04, args: "" }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ startsWith(matrix.os, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Linux system deps
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libsoup-3.0-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev patchelf
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: .
+          tauriScript: cargo tauri
+          args: ${{ matrix.args }}
+          # Unsigned builds. Add APPLE_* / TAURI_SIGNING_* secrets to sign/notarize/auto-update.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: timeline-${{ matrix.os }}
+          path: target/**/release/bundle/**/*
+          if-no-files-found: warn

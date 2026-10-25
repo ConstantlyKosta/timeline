@@ -1,0 +1,44 @@
+Timeline bundles or links the open-source components below. All are under
+MIT, Apache-2.0, BSD or ISC (MIT/Apache dual-licensed Rust crates may be used under either).
+Full license texts ship with each package (node_modules/<pkg>/LICENSE, ~/.cargo/registry/src/*/<crate>/LICENSE*).
+Licenses listed are the packages' declared licenses, from upstream metadata/knowledge; run
+`cargo license` / `npx license-checker --production` to regenerate an authoritative list (not run here).
+
+== App shell / Rust ==
+Tauri 2 (tauri, tauri-build, tauri-plugin-dialog, tauri-plugin-window-state)  MIT OR Apache-2.0   (c) Tauri Programme within The Commons Conservancy
+rusqlite (bundled SQLite)        MIT   (SQLite itself is public domain)
+rusqlite_migration               Apache-2.0
+chrono                           MIT OR Apache-2.0
+serde, serde_json                MIT OR Apache-2.0
+uuid                             MIT OR Apache-2.0
+sha2                             MIT OR Apache-2.0
+thiserror                        MIT OR Apache-2.0
+unicode-normalization            MIT OR Apache-2.0
+lofty (audio tags/duration)      MIT OR Apache-2.0
+hound (WAV)                      Apache-2.0
+png                              MIT OR Apache-2.0
+tiny_http (dev-bridge only)      MIT OR Apache-2.0
+percent-encoding                 MIT OR Apache-2.0
+tempfile (tests)                 MIT OR Apache-2.0
+
+== UI ==
+CodeMirror 6 (@codemirror/*, codemirror)  MIT   (c) Marijn Haverbeke and others
+@lezer/markdown, @lezer/highlight         MIT   (c) Marijn Haverbeke and others
+@xyflow/react (React Flow)                MIT   (c) webkid GmbH
+cmdk                                      MIT   (c) Paco Coursey
+wavesurfer.js                             BSD-3-Clause
+zustand                                   MIT   (c) Paul Henschel
+date-fns                                  MIT   (c) Sasha Koss, Lesha Koss
+lucide-react                              ISC (+ MIT portions from Feather)
+React, React DOM                          MIT   (c) Meta Platforms, Inc.
+Vite, @vitejs/plugin-react, Vitest        MIT
+TypeScript                                Apache-2.0   (c) Microsoft
+Playwright (@playwright/test)             Apache-2.0   (c) Microsoft
+jsdom                                     MIT
+
+== Design inspiration only (no code copied) ==
+Logseq, SiYuan, Zettlr, Joplin, AppFlowy, Notesnook, Memos, Journey/Diaro, Immich, Whishper/Buzz.
+Some of these are AGPL/GPL; nothing from them is included.
+
+== Fonts ==
+None bundled; the UI uses the system font stack.

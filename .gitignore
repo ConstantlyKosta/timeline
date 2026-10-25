@@ -1,0 +1,7 @@
+target/
+node_modules/
+dist/
+*.zip
+e2e/screenshots/
+.DS_Store
+e2e-data/

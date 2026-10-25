@@ -1,0 +1,44 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Timeline",
+  "version": "0.1.0",
+  "identifier": "app.timeline.local",
+  "build": {
+    "frontendDist": "../ui/dist",
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeDevCommand": "npm --prefix ../ui run dev -- --host 127.0.0.1 --port 5173 --strictPort",
+    "beforeBuildCommand": "npm --prefix ../ui ci && npm --prefix ../ui run build"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Timeline",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 360,
+        "minHeight": 480,
+        "resizable": true,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: blob: tlmedia: http://tlmedia.localhost; media-src 'self' blob: tlmedia: http://tlmedia.localhost; connect-src 'self' ipc: http://ipc.localhost tlmedia: http://tlmedia.localhost blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; worker-src 'self' blob:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Productivity",
+    "shortDescription": "Local-first memory timeline",
+    "longDescription": "Private, local-first notes, recordings and photos on one zoomable timeline.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

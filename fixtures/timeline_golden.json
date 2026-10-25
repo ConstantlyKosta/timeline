@@ -1,0 +1,881 @@
+{
+  "entries": [
+    {
+      "duration": 0.0,
+      "id": "a",
+      "kind": "note",
+      "snippet": "snippet a",
+      "start": 1760000000000,
+      "tags": [
+        "trip"
+      ],
+      "title": "T-a"
+    },
+    {
+      "duration": 1800.0,
+      "id": "b",
+      "kind": "recording",
+      "snippet": "snippet b",
+      "start": 1760003600000,
+      "tags": [
+        "trip"
+      ],
+      "title": "T-b"
+    },
+    {
+      "duration": 5400.0,
+      "id": "c",
+      "kind": "recording",
+      "snippet": "snippet c",
+      "start": 1760177800000,
+      "tags": [
+        "work"
+      ],
+      "title": "T-c"
+    },
+    {
+      "duration": 0.0,
+      "id": "d",
+      "kind": "photo",
+      "snippet": "snippet d",
+      "start": 1760178800000,
+      "tags": [],
+      "title": "T-d"
+    },
+    {
+      "duration": 0.0,
+      "id": "e",
+      "kind": "note",
+      "snippet": "snippet e",
+      "start": 1760777600000,
+      "tags": [
+        "work",
+        "health"
+      ],
+      "title": "T-e"
+    },
+    {
+      "duration": 120.0,
+      "id": "f",
+      "kind": "video",
+      "snippet": "snippet f",
+      "start": 1760777601000,
+      "tags": [
+        "health"
+      ],
+      "title": "T-f"
+    },
+    {
+      "duration": 0.0,
+      "id": "g",
+      "kind": "note",
+      "snippet": "snippet g",
+      "start": 1763456000000,
+      "tags": [],
+      "title": "T-g"
+    }
+  ],
+  "layouts": [
+    {
+      "layout": {
+        "clusters": [
+          {
+            "count": 4,
+            "end": 1760183200000,
+            "entryIds": [
+              "a",
+              "b",
+              "c",
+              "d"
+            ],
+            "frame": {
+              "height": 40.0,
+              "width": 72.0,
+              "x": 36.0,
+              "y": 12.0
+            },
+            "id": "a",
+            "lane": 0,
+            "mediaCount": 1,
+            "noteCount": 1,
+            "recordingCount": 2,
+            "start": 1760000000000,
+            "title": "#trip"
+          },
+          {
+            "count": 2,
+            "end": 1760777721000,
+            "entryIds": [
+              "e",
+              "f"
+            ],
+            "frame": {
+              "height": 40.0,
+              "width": 72.0,
+              "x": 144.0,
+              "y": 12.0
+            },
+            "id": "e",
+            "lane": 0,
+            "mediaCount": 1,
+            "noteCount": 1,
+            "recordingCount": 0,
+            "start": 1760777600000,
+            "title": "#health"
+          },
+          {
+            "count": 1,
+            "end": 1763456000000,
+            "entryIds": [
+              "g"
+            ],
+            "frame": {
+              "height": 40.0,
+              "width": 72.0,
+              "x": 516.0,
+              "y": 12.0
+            },
+            "id": "g",
+            "lane": 0,
+            "mediaCount": 0,
+            "noteCount": 1,
+            "recordingCount": 0,
+            "start": 1763456000000,
+            "title": "T-g"
+          }
+        ],
+        "contentHeight": 72.0,
+        "items": [],
+        "laneCount": 1,
+        "level": "month"
+      },
+      "pointsPerDay": 12.0
+    },
+    {
+      "layout": {
+        "clusters": [
+          {
+            "count": 4,
+            "end": 1760183200000,
+            "entryIds": [
+              "a",
+              "b",
+              "c",
+              "d"
+            ],
+            "frame": {
+              "height": 40.0,
+              "width": 76.33333333333334,
+              "x": 108.0,
+              "y": 12.0
+            },
+            "id": "a",
+            "lane": 0,
+            "mediaCount": 1,
+            "noteCount": 1,
+            "recordingCount": 2,
+            "start": 1760000000000,
+            "title": "#trip"
+          },
+          {
+            "count": 2,
+            "end": 1760777721000,
+            "entryIds": [
+              "e",
+              "f"
+            ],
+            "frame": {
+              "height": 40.0,
+              "width": 72.0,
+              "x": 432.0,
+              "y": 12.0
+            },
+            "id": "e",
+            "lane": 0,
+            "mediaCount": 1,
+            "noteCount": 1,
+            "recordingCount": 0,
+            "start": 1760777600000,
+            "title": "#health"
+          },
+          {
+            "count": 1,
+            "end": 1763456000000,
+            "entryIds": [
+              "g"
+            ],
+            "frame": {
+              "height": 40.0,
+              "width": 72.0,
+              "x": 1548.0,
+              "y": 12.0
+            },
+            "id": "g",
+            "lane": 0,
+            "mediaCount": 0,
+            "noteCount": 1,
+            "recordingCount": 0,
+            "start": 1763456000000,
+            "title": "T-g"
+          }
+        ],
+        "contentHeight": 72.0,
+        "items": [],
+        "laneCount": 1,
+        "level": "month"
+      },
+      "pointsPerDay": 36.0
+    },
+    {
+      "layout": {
+        "clusters": [],
+        "contentHeight": 144.0,
+        "items": [
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 120.0,
+              "x": 240.0,
+              "y": 12.0
+            },
+            "id": "a",
+            "kind": "note",
+            "lane": 0,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-a"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 138.5900603509299,
+              "x": 243.33333333333334,
+              "y": 72.0
+            },
+            "id": "b",
+            "kind": "recording",
+            "lane": 1,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-b"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 210.7629936490925,
+              "x": 404.6296296296296,
+              "y": 12.0
+            },
+            "id": "c",
+            "kind": "recording",
+            "lane": 0,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-c"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 56.0,
+              "x": 405.55555555555554,
+              "y": 72.0
+            },
+            "id": "d",
+            "kind": "photo",
+            "lane": 1,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-d"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 120.0,
+              "x": 960.0,
+              "y": 12.0
+            },
+            "id": "e",
+            "kind": "note",
+            "lane": 0,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-e"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 65.45584412271572,
+              "x": 960.0009259259259,
+              "y": 72.0
+            },
+            "id": "f",
+            "kind": "video",
+            "lane": 1,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-f"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 120.0,
+              "x": 3440.0,
+              "y": 12.0
+            },
+            "id": "g",
+            "kind": "note",
+            "lane": 0,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-g"
+          }
+        ],
+        "laneCount": 2,
+        "level": "week"
+      },
+      "pointsPerDay": 80.0
+    },
+    {
+      "layout": {
+        "clusters": [],
+        "contentHeight": 144.0,
+        "items": [
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 120.0,
+              "x": 480.0,
+              "y": 12.0
+            },
+            "id": "a",
+            "kind": "note",
+            "lane": 0,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-a"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 138.5900603509299,
+              "x": 486.6666666666667,
+              "y": 72.0
+            },
+            "id": "b",
+            "kind": "recording",
+            "lane": 1,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-b"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 210.7629936490925,
+              "x": 809.2592592592592,
+              "y": 12.0
+            },
+            "id": "c",
+            "kind": "recording",
+            "lane": 0,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-c"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 56.0,
+              "x": 811.1111111111111,
+              "y": 72.0
+            },
+            "id": "d",
+            "kind": "photo",
+            "lane": 1,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-d"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 120.0,
+              "x": 1920.0,
+              "y": 12.0
+            },
+            "id": "e",
+            "kind": "note",
+            "lane": 0,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-e"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 65.45584412271572,
+              "x": 1920.0018518518518,
+              "y": 72.0
+            },
+            "id": "f",
+            "kind": "video",
+            "lane": 1,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-f"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 120.0,
+              "x": 6880.0,
+              "y": 12.0
+            },
+            "id": "g",
+            "kind": "note",
+            "lane": 0,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-g"
+          }
+        ],
+        "laneCount": 2,
+        "level": "week"
+      },
+      "pointsPerDay": 160.0
+    },
+    {
+      "layout": {
+        "clusters": [],
+        "contentHeight": 144.0,
+        "items": [
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 120.0,
+              "x": 1200.0,
+              "y": 12.0
+            },
+            "id": "a",
+            "kind": "note",
+            "lane": 0,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-a"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 138.5900603509299,
+              "x": 1216.6666666666667,
+              "y": 72.0
+            },
+            "id": "b",
+            "kind": "recording",
+            "lane": 1,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-b"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 210.7629936490925,
+              "x": 2023.148148148148,
+              "y": 12.0
+            },
+            "id": "c",
+            "kind": "recording",
+            "lane": 0,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-c"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 56.0,
+              "x": 2027.7777777777778,
+              "y": 72.0
+            },
+            "id": "d",
+            "kind": "photo",
+            "lane": 1,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-d"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 120.0,
+              "x": 4800.0,
+              "y": 12.0
+            },
+            "id": "e",
+            "kind": "note",
+            "lane": 0,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-e"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 65.45584412271572,
+              "x": 4800.00462962963,
+              "y": 72.0
+            },
+            "id": "f",
+            "kind": "video",
+            "lane": 1,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-f"
+          },
+          {
+            "frame": {
+              "height": 52.0,
+              "width": 120.0,
+              "x": 17200.0,
+              "y": 12.0
+            },
+            "id": "g",
+            "kind": "note",
+            "lane": 0,
+            "showsSnippet": false,
+            "snippet": "",
+            "title": "T-g"
+          }
+        ],
+        "laneCount": 2,
+        "level": "week"
+      },
+      "pointsPerDay": 400.0
+    },
+    {
+      "layout": {
+        "clusters": [],
+        "contentHeight": 192.0,
+        "items": [
+          {
+            "frame": {
+              "height": 76.0,
+              "width": 200.0,
+              "x": 3600.0,
+              "y": 12.0
+            },
+            "id": "a",
+            "kind": "note",
+            "lane": 0,
+            "showsSnippet": true,
+            "snippet": "snippet a",
+            "title": "T-a"
+          },
+          {
+            "frame": {
+              "height": 76.0,
+              "width": 180.0,
+              "x": 3650.0,
+              "y": 96.0
+            },
+            "id": "b",
+            "kind": "recording",
+            "lane": 1,
+            "showsSnippet": true,
+            "snippet": "snippet b",
+            "title": "T-b"
+          },
+          {
+            "frame": {
+              "height": 76.0,
+              "width": 180.0,
+              "x": 6069.444444444444,
+              "y": 12.0
+            },
+            "id": "c",
+            "kind": "recording",
+            "lane": 0,
+            "showsSnippet": true,
+            "snippet": "snippet c",
+            "title": "T-c"
+          },
+          {
+            "frame": {
+              "height": 76.0,
+              "width": 96.0,
+              "x": 6083.333333333334,
+              "y": 96.0
+            },
+            "id": "d",
+            "kind": "photo",
+            "lane": 1,
+            "showsSnippet": true,
+            "snippet": "snippet d",
+            "title": "T-d"
+          },
+          {
+            "frame": {
+              "height": 76.0,
+              "width": 200.0,
+              "x": 14400.0,
+              "y": 12.0
+            },
+            "id": "e",
+            "kind": "note",
+            "lane": 0,
+            "showsSnippet": true,
+            "snippet": "snippet e",
+            "title": "T-e"
+          },
+          {
+            "frame": {
+              "height": 76.0,
+              "width": 180.0,
+              "x": 14400.013888888889,
+              "y": 96.0
+            },
+            "id": "f",
+            "kind": "video",
+            "lane": 1,
+            "showsSnippet": true,
+            "snippet": "snippet f",
+            "title": "T-f"
+          },
+          {
+            "frame": {
+              "height": 76.0,
+              "width": 200.0,
+              "x": 51600.0,
+              "y": 12.0
+            },
+            "id": "g",
+            "kind": "note",
+            "lane": 0,
+            "showsSnippet": true,
+            "snippet": "snippet g",
+            "title": "T-g"
+          }
+        ],
+        "laneCount": 2,
+        "level": "day"
+      },
+      "pointsPerDay": 1200.0
+    },
+    {
+      "layout": {
+        "clusters": [],
+        "contentHeight": 192.0,
+        "items": [
+          {
+            "frame": {
+              "height": 76.0,
+              "width": 200.0,
+              "x": 7200.0,
+              "y": 12.0
+            },
+            "id": "a",
+            "kind": "note",
+            "lane": 0,
+            "showsSnippet": true,
+            "snippet": "snippet a",
+            "title": "T-a"
+          },
+          {
+            "frame": {
+              "height": 76.0,
+              "width": 180.0,
+              "x": 7300.0,
+              "y": 96.0
+            },
+            "id": "b",
+            "kind": "recording",
+            "lane": 1,
+            "showsSnippet": true,
+            "snippet": "snippet b",
+            "title": "T-b"
+          },
+          {
+            "frame": {
+              "height": 76.0,
+              "width": 180.0,
+              "x": 12138.888888888889,
+              "y": 12.0
+            },
+            "id": "c",
+            "kind": "recording",
+            "lane": 0,
+            "showsSnippet": true,
+            "snippet": "snippet c",
+            "title": "T-c"
+          },
+          {
+            "frame": {
+              "height": 76.0,
+              "width": 96.0,
+              "x": 12166.666666666668,
+              "y": 96.0
+            },
+            "id": "d",
+            "kind": "photo",
+            "lane": 1,
+            "showsSnippet": true,
+            "snippet": "snippet d",
+            "title": "T-d"
+          },
+          {
+            "frame": {
+              "height": 76.0,
+              "width": 200.0,
+              "x": 28800.0,
+              "y": 12.0
+            },
+            "id": "e",
+            "kind": "note",
+            "lane": 0,
+            "showsSnippet": true,
+            "snippet": "snippet e",
+            "title": "T-e"
+          },
+          {
+            "frame": {
+              "height": 76.0,
+              "width": 180.0,
+              "x": 28800.027777777777,
+              "y": 96.0
+            },
+            "id": "f",
+            "kind": "video",
+            "lane": 1,
+            "showsSnippet": true,
+            "snippet": "snippet f",
+            "title": "T-f"
+          },
+          {
+            "frame": {
+              "height": 76.0,
+              "width": 200.0,
+              "x": 103200.0,
+              "y": 12.0
+            },
+            "id": "g",
+            "kind": "note",
+            "lane": 0,
+            "showsSnippet": true,
+            "snippet": "snippet g",
+            "title": "T-g"
+          }
+        ],
+        "laneCount": 2,
+        "level": "day"
+      },
+      "pointsPerDay": 2400.0
+    }
+  ],
+  "origin": 1759740800000,
+  "snaps": [
+    {
+      "level": "month",
+      "result": {
+        "mapping": {
+          "origin": 1759740800000,
+          "pointsPerDay": 36.0
+        },
+        "scrollOffset": -297.5
+      }
+    },
+    {
+      "level": "week",
+      "result": {
+        "mapping": {
+          "origin": 1759740800000,
+          "pointsPerDay": 160.0
+        },
+        "scrollOffset": 400.0
+      }
+    },
+    {
+      "level": "day",
+      "result": {
+        "mapping": {
+          "origin": 1759740800000,
+          "pointsPerDay": 1200.0
+        },
+        "scrollOffset": 6250.0
+      }
+    }
+  ],
+  "zoomIn": {
+    "result": {
+      "mapping": {
+        "origin": 1759740800000,
+        "pointsPerDay": 160.0
+      },
+      "scrollOffset": 1420.0
+    },
+    "target": 1760777600000,
+    "viewportWidth": 1000.0
+  },
+  "zooms": [
+    {
+      "anchor": 300.0,
+      "factor": 1.5,
+      "offset": 1000.0,
+      "result": {
+        "mapping": {
+          "origin": 1759740800000,
+          "pointsPerDay": 240.0
+        },
+        "scrollOffset": 1650.0
+      }
+    },
+    {
+      "anchor": 0.0,
+      "factor": 0.5,
+      "offset": 250.0,
+      "result": {
+        "mapping": {
+          "origin": 1759740800000,
+          "pointsPerDay": 80.0
+        },
+        "scrollOffset": 125.0
+      }
+    },
+    {
+      "anchor": 777.0,
+      "factor": 3.0,
+      "offset": 0.0,
+      "result": {
+        "mapping": {
+          "origin": 1759740800000,
+          "pointsPerDay": 480.0
+        },
+        "scrollOffset": 1554.0
+      }
+    },
+    {
+      "anchor": 500.0,
+      "factor": 0.1,
+      "offset": 5000.0,
+      "result": {
+        "mapping": {
+          "origin": 1759740800000,
+          "pointsPerDay": 16.0
+        },
+        "scrollOffset": 50.0
+      }
+    },
+    {
+      "anchor": 100.0,
+      "factor": 50.0,
+      "offset": 100.0,
+      "result": {
+        "mapping": {
+          "origin": 1759740800000,
+          "pointsPerDay": 2400.0
+        },
+        "scrollOffset": 2900.0
+      }
+    }
+  ]
+}

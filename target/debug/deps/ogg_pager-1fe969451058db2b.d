@@ -1,0 +1,12 @@
+/workspace/timeline-tauri/target/debug/deps/ogg_pager-1fe969451058db2b.d: /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/lib.rs /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/crc.rs /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/error.rs /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/header.rs /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/packets.rs /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/paginate.rs
+
+/workspace/timeline-tauri/target/debug/deps/libogg_pager-1fe969451058db2b.rlib: /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/lib.rs /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/crc.rs /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/error.rs /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/header.rs /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/packets.rs /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/paginate.rs
+
+/workspace/timeline-tauri/target/debug/deps/libogg_pager-1fe969451058db2b.rmeta: /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/lib.rs /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/crc.rs /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/error.rs /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/header.rs /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/packets.rs /home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/paginate.rs
+
+/home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/lib.rs:
+/home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/crc.rs:
+/home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/error.rs:
+/home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/header.rs:
+/home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/packets.rs:
+/home/box/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ogg_pager-0.7.2/src/paginate.rs:

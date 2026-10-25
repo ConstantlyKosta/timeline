@@ -1,0 +1,21 @@
+[package]
+name = "timeline-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Timeline desktop/mobile shell (Tauri 2) around timeline-core"
+
+[lib]
+name = "timeline_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-window-state = "2"
+timeline-core = { path = "../crates/timeline-core" }
+serde_json = "1"
+percent-encoding = "2"
